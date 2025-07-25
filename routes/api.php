@@ -2,12 +2,13 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\PhotobookCartController;
-use App\Http\Controllers\PhotobookOrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\TemplateController;
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OrderHistoryController;
+use App\Http\Controllers\PhotobookCartController;
+use App\Http\Controllers\PhotobookOrderController;
 use App\Http\Controllers\MidtransWebhookController;
 
 
@@ -54,7 +55,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::put('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
 });
-
+    // Order History Routes
+    Route::get('/orders', [OrderHistoryController::class, 'index']);
+    Route::get('/orders/{order}', [OrderHistoryController::class, 'show']);
+    Route::get('/orders/{order}/timeline', [OrderHistoryController::class, 'timeline']);
 // Route untuk Webhook Midtrans (TIDAK menggunakan auth middleware)
 // Midtrans akan mengakses ini secara langsung
 Route::post('/webhook/midtrans', [MidtransWebhookController::class, 'handle'])
