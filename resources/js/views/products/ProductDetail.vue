@@ -63,23 +63,6 @@
                   </div>
                 </template>
               </b-carousel-slide>
-              
-              <b-carousel-slide v-if="sampleTemplates.length > 1">
-                <template #img>
-                  <div class="text-center">
-                    <h5>More Templates Available</h5>
-                    <b-img
-                      :src="getTemplateImage(sampleTemplates[1])"
-                      fluid
-                      alt="Template Sample"
-                      class="d-block mx-auto"
-                      style="max-height: 300px; object-fit: contain;"
-                      @error="onTemplateImageError"
-                    ></b-img>
-                    <p class="mt-2 text-muted">Choose from {{ product.templates.length }} templates</p>
-                  </div>
-                </template>
-              </b-carousel-slide>
             </b-carousel>
           </b-card>
         </b-col>
@@ -119,9 +102,6 @@
                   >
                     {{ template.name }}
                   </b-badge>
-                  <b-badge v-if="product.templates.length > sampleTemplates.length" variant="secondary" class="mr-2 mb-2">
-                    +{{ product.templates.length - sampleTemplates.length }} more
-                  </b-badge>
                 </div>
               </b-col>
             </b-row>
@@ -160,6 +140,21 @@
                 <b-icon v-else icon="cart-plus"></b-icon>
                 {{ addingToCart ? 'Adding to Cart...' : 'Add to Cart' }}
               </b-button>
+              
+              <!-- Success Message -->
+              <b-alert 
+                v-if="showSuccessMessage" 
+                variant="success" 
+                dismissible 
+                class="mt-3"
+                @dismissed="showSuccessMessage = false"
+              >
+                <b-icon icon="check-circle"></b-icon>
+                Product added to cart successfully!
+                <b-link :to="{ name: 'Cart' }" class="alert-link ml-2">
+                  View Cart
+                </b-link>
+              </b-alert>
             </b-form>
 
             <!-- Action Buttons -->
@@ -210,12 +205,6 @@
                   </b-card-body>
                 </b-card>
               </b-col>
-              
-              <b-col v-if="product.templates.length > 6" cols="12" class="text-center">
-                <p class="text-muted">
-                  And {{ product.templates.length - 6 }} more templates available after purchase
-                </p>
-              </b-col>
             </b-row>
           </b-card>
         </b-col>
@@ -227,7 +216,8 @@
 <script>
 import productService from '../../services/productService';
 import cartService from '../../services/cartService';
-import { mapActions } from 'vuex';
+import api from '../../services/api'; // Tambahkan import ini
+import { mapActions, mapGetters } from 'vuex';
 
 export default {
   name: 'ProductDetail',
@@ -237,6 +227,7 @@ export default {
       loading: false,
       error: null,
       addingToCart: false,
+      showSuccessMessage: false,
       cartForm: {
         quantity: 1,
         design_same: true
@@ -244,6 +235,7 @@ export default {
     };
   },
   computed: {
+    ...mapGetters('cart', ['cartItems']),
     sampleTemplates() {
       return this.product?.templates?.slice(0, 3) || [];
     }
@@ -252,7 +244,7 @@ export default {
     await this.loadProduct();
   },
   methods: {
-    ...mapActions('cart', ['addItem']),
+    ...mapActions('cart', ['loadCart', 'addItem']), // Ini sudah benar
     
     async loadProduct() {
       this.loading = true;
@@ -277,28 +269,45 @@ export default {
       }
       
       this.addingToCart = true;
+      this.showSuccessMessage = false;
       
       try {
         const cartItem = {
           product_id: this.product.id,
-          template_id: this.product.templates[0]?.id || null, // Default to first template
+          template_id: this.product.templates[0]?.id || null,
           quantity: this.cartForm.quantity,
           design_same: this.cartForm.design_same
         };
         
-        await cartService.addToCart(cartItem);
+        // Check if item already exists in cart
+        const existingItem = this.findExistingCartItem(cartItem);
         
-        // Update Vuex store
-        await this.addItem(cartItem);
+        if (existingItem) {
+          // Update quantity of existing item
+          const newQuantity = existingItem.quantity + cartItem.quantity;
+          await this.updateExistingItem(existingItem.id, newQuantity);
+        } else {
+          // Add new item to cart
+          const response = await cartService.addToCart(cartItem);
+          await this.addItem(response.cart_item); // Gunakan response dari cartService
+        }
+        
+        // Show success message
+        this.showSuccessMessage = true;
+        
+        // Auto-hide message after 5 seconds
+        setTimeout(() => {
+          this.showSuccessMessage = false;
+        }, 5000);
+        
+        // Update cart badge
+        await this.$store.dispatch('cart/loadCart');
         
         this.$store.dispatch('showNotification', {
           title: 'Success',
           message: 'Product added to cart!',
           type: 'success'
         });
-        
-        // Redirect to cart
-        this.$router.push({ name: 'Cart' });
         
       } catch (error) {
         console.error('Failed to add to cart:', error);
@@ -309,6 +318,32 @@ export default {
         });
       } finally {
         this.addingToCart = false;
+      }
+    },
+    
+    findExistingCartItem(newItem) {
+      return this.cartItems.find(item => 
+        item.product_id === newItem.product_id &&
+        item.template_id === newItem.template_id &&
+        item.design_same === newItem.design_same
+      );
+    },
+    
+    async updateExistingItem(cartItemId, newQuantity) {
+      try {
+        // Update quantity via API
+        const response = await api.put(`/cart/${cartItemId}`, {
+          quantity: newQuantity
+        });
+        
+        // Update Vuex store
+        await this.$store.dispatch('cart/loadCart');
+        
+        return response.data;
+      } catch (error) {
+        console.error('Failed to update cart item:', error);
+        // If update fails, fallback to add new item
+        throw error;
       }
     },
     
@@ -323,7 +358,7 @@ export default {
         }
         return product.thumbnail;
       }
-      return 'https://via.placeholder.com/500x400/3490dc/ffffff?text=Product+Image';
+      return 'https://www.aaronfaber.com/wp-content/uploads/2017/03/product-placeholder-wp.jpg'; // Hapus spasi
     },
     
     getTemplateImage(template) {
@@ -333,15 +368,15 @@ export default {
         }
         return template.sample_image;
       }
-      return 'https://via.placeholder.com/300x200/6cb2eb/ffffff?text=Template';
+      return 'https://www.aaronfaber.com/wp-content/uploads/2017/03/product-placeholder-wp.jpg'; // Hapus spasi
     },
     
     onMainImageError(event) {
-      event.target.src = 'https://via.placeholder.com/500x400/cccccc/ffffff?text=Product+Image+Not+Found';
+      event.target.src = 'https://www.aaronfaber.com/wp-content/uploads/2017/03/product-placeholder-wp.jpg'; // Hapus spasi
     },
     
     onTemplateImageError(event) {
-      event.target.src = 'https://via.placeholder.com/300x200/cccccc/ffffff?text=Template+Not+Found';
+      event.target.src = 'https://www.aaronfaber.com/wp-content/uploads/2017/03/product-placeholder-wp.jpg'; // Hapus spasi
     }
   }
 };

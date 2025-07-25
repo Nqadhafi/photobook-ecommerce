@@ -27,6 +27,15 @@ const mutations = {
       state.items.splice(index, 1);
       state.itemCount = state.items.length;
     }
+  },
+  UPDATE_ITEM(state, updatedItem) {
+    const index = state.items.findIndex(item => item.id === updatedItem.id);
+    if (index !== -1) {
+      const oldItem = state.items[index];
+      state.total -= oldItem.quantity * oldItem.product.price;
+      state.items.splice(index, 1, updatedItem);
+      state.total += updatedItem.quantity * updatedItem.product.price;
+    }
   }
 };
 
@@ -58,6 +67,17 @@ const actions = {
       await cartService.removeFromCart(itemId);
       commit('REMOVE_ITEM', itemId);
       return { message: 'Item removed from cart' };
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async updateItemQuantity({ commit, dispatch }, { itemId, quantity }) {
+    try {
+      const response = await cartService.updateCartItemQuantity(itemId, quantity);
+      // Reload cart to ensure consistency
+      await dispatch('loadCart');
+      return response;
     } catch (error) {
       throw error;
     }

@@ -199,11 +199,11 @@ export default {
         }
         return product.thumbnail;
       }
-      return 'https://via.placeholder.com/300x200/3490dc/ffffff?text=Product+Image';
+      return 'https://www.aaronfaber.com/wp-content/uploads/2017/03/product-placeholder-wp.jpg';
     },
     
     onImageError(event) {
-      event.target.src = 'https://via.placeholder.com/300x200/cccccc/ffffff?text=Image+Not+Found';
+      event.target.src = 'https://www.aaronfaber.com/wp-content/uploads/2017/03/product-placeholder-wp.jpg';
     }
   }
 };

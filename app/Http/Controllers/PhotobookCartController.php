@@ -125,9 +125,35 @@ class PhotobookCartController extends Controller
      * @param  \App\Models\PhotobookCart  $photobookCart
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, PhotobookCart $photobookCart)
+    public function update(Request $request, PhotobookCart $cart): JsonResponse
     {
-        //
+        // Authorization: Pastikan user hanya bisa update item milik mereka sendiri
+        if ($request->user()->id !== $cart->user_id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // Validasi input
+        $validator = Validator::make($request->all(), [
+            'quantity' => 'sometimes|integer|min:1',
+            'design_same' => 'sometimes|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $validatedData = $validator->validated();
+
+        // Update item
+        $cart->update($validatedData);
+
+        // Load relasi untuk response
+        $cart->load(['product', 'template']);
+
+        return response()->json([
+            'message' => 'Cart item updated',
+            'cart_item' => $cart
+        ]);
     }
 
     /**

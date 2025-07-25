@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/cart', [PhotobookCartController::class, 'index']);
     Route::post('/cart', [PhotobookCartController::class, 'store']);
     Route::delete('/cart/{cart}', [PhotobookCartController::class, 'destroy']); 
+    Route::put('/cart/{cart}', [PhotobookCartController::class, 'update']);
 // Route untuk Checkout 
     Route::post('/checkout', [PhotobookOrderController::class, 'checkout']); 
     // --- Route baru untuk Upload File ---

@@ -27,6 +27,15 @@ class CartService {
       throw error.response?.data || { error: 'Failed to remove item from cart' };
     }
   }
+
+  async updateCartItemQuantity(cartItemId, quantity) {
+    try {
+      const response = await api.put(`/cart/${cartItemId}`, { quantity });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Failed to update cart item' };
+    }
+  }
 }
 
 export default new CartService();
