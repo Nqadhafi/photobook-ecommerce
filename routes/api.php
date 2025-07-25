@@ -6,6 +6,8 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PhotobookCartController;
 use App\Http\Controllers\PhotobookOrderController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\MidtransWebhookController;
 
 
@@ -25,6 +27,10 @@ Route::get('/', function () {
 
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
+Route::get('/products', [ProductController::class, 'index']);
+Route::get('/products/{product}', [ProductController::class, 'show']);
+Route::get('/products/{product}/templates', [ProductController::class, 'templates']);
+Route::get('/templates/{template}', [TemplateController::class, 'show']);
 
 // Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //     return $request->user();
