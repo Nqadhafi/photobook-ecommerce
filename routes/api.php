@@ -2,10 +2,11 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PhotobookCartController;
 use App\Http\Controllers\PhotobookOrderController;
 use App\Http\Controllers\MidtransWebhookController;
-use App\Http\Controllers\NotificationController;
 
 
 /*
@@ -21,11 +22,19 @@ use App\Http\Controllers\NotificationController;
 Route::get('/', function () {
     return response()->json(['message' => 'API is running']);
 });
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
+
+Route::post('/auth/register', [AuthController::class, 'register']);
+Route::post('/auth/login', [AuthController::class, 'login']);
+
+// Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+//     return $request->user();
+// });
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::get('/auth/user', [AuthController::class, 'user']);
+    Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
+
     Route::get('/cart', [PhotobookCartController::class, 'index']);
     Route::post('/cart', [PhotobookCartController::class, 'store']);
     Route::delete('/cart/{cart}', [PhotobookCartController::class, 'destroy']); 
