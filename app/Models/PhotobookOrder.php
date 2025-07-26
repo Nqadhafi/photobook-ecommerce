@@ -45,7 +45,7 @@ class PhotobookOrder extends Model
     // Relasi
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class , 'user_id');
     }
 
     public function items()
@@ -65,7 +65,7 @@ class PhotobookOrder extends Model
 
     public function notifications()
     {
-        return $this->hasMany(PhotobookNotification::class);
+        return $this->hasMany(PhotobookNotification::class, 'order_id');
     }
 
     // Scope

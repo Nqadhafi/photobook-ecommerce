@@ -46,6 +46,6 @@ class PhotobookMidtransPayment extends Model
     // Relasi
     public function order()
     {
-        return $this->belongsTo(PhotobookOrder::class);
+        return $this->belongsTo(PhotobookOrder::class , 'order_id');
     }
 }

@@ -25,16 +25,16 @@ class PhotobookCart extends Model
     // Relasi
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function product()
     {
-        return $this->belongsTo(PhotobookProduct::class);
+        return $this->belongsTo(PhotobookProduct::class , 'product_id');
     }
 
     public function template()
     {
-        return $this->belongsTo(PhotobookTemplate::class);
+        return $this->belongsTo(PhotobookTemplate::class , 'template_id');
     }
 }

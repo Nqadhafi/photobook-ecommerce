@@ -26,17 +26,17 @@ class PhotobookOrderItem extends Model
     // Relasi
     public function order()
     {
-        return $this->belongsTo(PhotobookOrder::class);
+        return $this->belongsTo(PhotobookOrder::class , 'order_id');
     }
 
     public function product()
     {
-        return $this->belongsTo(PhotobookProduct::class);
+        return $this->belongsTo(PhotobookProduct::class , 'product_id');
     }
 
     public function template()
     {
-        return $this->belongsTo(PhotobookTemplate::class);
+        return $this->belongsTo(PhotobookTemplate::class , 'template_id');
     }
 
     public function files()

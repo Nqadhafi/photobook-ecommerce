@@ -27,12 +27,12 @@ class PhotobookNotification extends Model
     // Relasi
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class , 'user_id');
     }
 
     public function order()
     {
-        return $this->belongsTo(PhotobookOrder::class);
+        return $this->belongsTo(PhotobookOrder::class , 'order_id');
     }
 
     // Scope

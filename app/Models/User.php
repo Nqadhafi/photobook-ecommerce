@@ -30,21 +30,21 @@ class User extends Authenticatable
     // Relasi
     public function photobookProfile()
     {
-        return $this->hasOne(PhotobookCustomerProfile::class);
+        return $this->hasOne(PhotobookCustomerProfile::class , 'user_id');
     }
 
     public function photobookOrders()
     {
-        return $this->hasMany(PhotobookOrder::class);
+        return $this->hasMany(PhotobookOrder::class, 'user_id');
     }
 
     public function photobookNotifications()
     {
-        return $this->hasMany(PhotobookNotification::class);
+        return $this->hasMany(PhotobookNotification::class , 'user_id');
     }
 
     public function photobookCarts()
     {
-        return $this->hasMany(PhotobookCart::class);
+        return $this->hasMany(PhotobookCart::class, 'user_id');
     }
 }

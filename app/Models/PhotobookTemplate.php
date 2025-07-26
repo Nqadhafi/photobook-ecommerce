@@ -25,11 +25,11 @@ class PhotobookTemplate extends Model
     // Relasi
     public function product()
     {
-        return $this->belongsTo(PhotobookProduct::class);
+        return $this->belongsTo(PhotobookProduct::class, 'product_id');
     }
 
     public function orderItems()
     {
-        return $this->hasMany(PhotobookOrderItem::class);
+        return $this->hasMany(PhotobookOrderItem::class , 'template_id');
     }
 }
