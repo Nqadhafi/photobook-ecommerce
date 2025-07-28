@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Log;
 
 
 class AuthController extends Controller
@@ -135,66 +137,76 @@ class AuthController extends Controller
     public function updateProfile(Request $request): JsonResponse
     {
         try {
-            $validator = Validator::make($request->all(), [
+            // 1. Validasi data utama dan photobook_profile
+            $rules = [
                 'name' => 'sometimes|string|max:255',
                 'email' => 'sometimes|string|email|max:255|unique:users,email,' . $request->user()->id,
-                'phone_number' => 'sometimes|nullable|string|max:20',
-                'address' => 'sometimes|nullable|string|max:500',
-                'city' => 'sometimes|nullable|string|max:100',
-                'postal_code' => 'sometimes|nullable|string|max:10',
-                'province' => 'sometimes|nullable|string|max:100',
-                'country' => 'sometimes|nullable|string|max:100',
-            ]);
+                // Validasi untuk field photobook_profile, perhatikan prefix 'photobook_profile.'
+                'photobook_profile.phone_number' => 'sometimes|nullable|string|max:20',
+                'photobook_profile.address' => 'sometimes|nullable|string|max:500',
+                'photobook_profile.city' => 'sometimes|nullable|string|max:100',
+                'photobook_profile.postal_code' => 'sometimes|nullable|string|max:10',
+                'photobook_profile.province' => 'sometimes|nullable|string|max:100',
+                'photobook_profile.country' => 'sometimes|nullable|string|max:100',
+            ];
+
+            $validator = Validator::make($request->all(), $rules);
 
             if ($validator->fails()) {
+                Log::info('Profile update validation failed', ['errors' => $validator->errors(), 'input' => $request->all()]); // Log untuk debugging
                 return response()->json(['errors' => $validator->errors()], 422);
             }
 
             $user = $request->user();
-            $validatedData = $validator->validated();
+            $validatedData = $validator->validated(); // Gunakan data yang sudah tervalidasi
 
-            // Update user data
-            if (isset($validatedData['name'])) {
-                $user->name = $validatedData['name'];
-            }
-            
-            if (isset($validatedData['email'])) {
-                $user->email = $validatedData['email'];
-            }
-            
-            $user->save();
-
-            // Update profile data
-            $profileData = [];
-            if (isset($validatedData['phone_number'])) {
-                $profileData['phone_number'] = $validatedData['phone_number'];
-            }
-            if (isset($validatedData['address'])) {
-                $profileData['address'] = $validatedData['address'];
-            }
-            if (isset($validatedData['city'])) {
-                $profileData['city'] = $validatedData['city'];
-            }
-            if (isset($validatedData['postal_code'])) {
-                $profileData['postal_code'] = $validatedData['postal_code'];
-            }
-            if (isset($validatedData['province'])) {
-                $profileData['province'] = $validatedData['province'];
-            }
-            if (isset($validatedData['country'])) {
-                $profileData['country'] = $validatedData['country'];
+            // 2. Update data user utama (name, email)
+            // Gunakan Arr::only untuk mengambil hanya field user utama
+            $userData = Arr::only($validatedData, ['name', 'email']);
+            if (!empty($userData)) {
+                 // Hanya update jika ada data yang berubah
+                 if (isset($userData['name'])) {
+                     $user->name = $userData['name'];
+                 }
+                 if (isset($userData['email'])) {
+                     // Validasi unique sudah dilakukan di awal
+                     $user->email = $userData['email'];
+                 }
+                 $user->save();
             }
 
-            if (!empty($profileData)) {
-                $user->photobookProfile()->update($profileData);
+
+            // 3. Update data photobook_profile
+            // Periksa apakah ada data photobook_profile dalam input yang tervalidasi
+            if (isset($validatedData['photobook_profile']) && is_array($validatedData['photobook_profile'])) {
+                $profileData = Arr::only($validatedData['photobook_profile'], [
+                    'phone_number', 'address', 'city', 'postal_code', 'province', 'country'
+                ]);
+
+                // Hanya update jika ada field yang dikirim
+                if (!empty($profileData)) {
+                    // UpdateOrCreate tidak cocok di sini karena record sudah pasti ada
+                    // Kita update langsung relasinya
+                    $user->photobookProfile()->update($profileData);
+                    // Atau jika update() tidak bekerja karena mass assignment:
+                    // $profile = $user->photobookProfile;
+                    // foreach ($profileData as $key => $value) {
+                    //     $profile->$key = $value;
+                    // }
+                    // $profile->save();
+                }
             }
+
+            // 4. Load relasi dan kirim response
+            $updatedUser = $user->load('photobookProfile'); // Pastikan data terbaru dimuat
 
             return response()->json([
                 'message' => 'Profile updated successfully',
-                'user' => $user->load('photobookProfile')
+                'user' => $updatedUser // Kembalikan user yang sudah diupdate
             ]);
 
         } catch (\Exception $e) {
+            Log::error('Profile update failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString(), 'input' => $request->all()]); // Log error
             return response()->json(['error' => 'Profile update failed: ' . $e->getMessage()], 500);
         }
     }
