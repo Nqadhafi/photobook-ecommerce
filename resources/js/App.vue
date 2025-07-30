@@ -4,31 +4,25 @@
   </div>
 </template>
 
+<!-- App.vue -->
 <script>
-import { mapActions, mapGetters } from 'vuex';
-
 export default {
-  name: 'App',
-  computed: {
-    ...mapGetters('auth', ['isAuthenticated'])
-  },
   async created() {
-    // Auto-fetch user data saat app load
-    if (this.$store.getters['auth/isAuthenticated'] === null) {
+    // ✅ Cek hanya jika belum diambil
+    if (!this.$store.state.auth.userFetched) {
       try {
         await this.$store.dispatch('auth/fetchUser');
       } catch (error) {
-        // User tidak authenticated, biarkan tetap null
-        console.log('No authenticated user found');
+        // 401 itu normal → user belum login
+        console.log('Guest user detected');
       }
     }
-    
-    // Auto-load cart jika user logged in
+
     if (this.$store.getters['auth/isAuthenticated']) {
       try {
         await this.$store.dispatch('cart/loadCart');
       } catch (error) {
-        console.log('Failed to load cart data');
+        console.log('Failed to load cart');
       }
     }
   }
@@ -36,7 +30,6 @@ export default {
 </script>
 
 <style>
-/* Global styles */
 #app {
   min-height: 100vh;
   display: flex;

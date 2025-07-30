@@ -37,9 +37,9 @@ api.interceptors.response.use(
     if (error.response?.status === 419) {
       console.warn('CSRF token mismatch. Refresh the page.');
     }
-    if (error.response?.status === 401 && logoutCallback) {
-      logoutCallback();
-    }
+    // if (error.response?.status === 401 && logoutCallback) {
+    //   logoutCallback();
+    // }
     return Promise.reject(error);
   }
 );

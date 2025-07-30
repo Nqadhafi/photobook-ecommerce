@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,6 +17,14 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('app');
 });
+// Route untuk API → tetap pakai sanctum
+Route::middleware('auth:sanctum')->prefix('api')->group(function () {
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
+});
+
+// Route untuk frontend SPA: kirim index.blade.php untuk semua rute non-API
 Route::get('/{any}', function () {
     return view('app');
-})->where('any', '.*');
+})->where('any', '^(?!api/|sanctum/|storage/|assets/).*$');

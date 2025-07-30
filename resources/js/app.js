@@ -1,4 +1,3 @@
-// app.js
 require('./bootstrap');
 
 import Vue from 'vue';
@@ -26,30 +25,19 @@ Vue.use(IconsPlugin);
 
 Vue.config.productionTip = false;
 
-// Set logout callback untuk redirect konsisten
+// Set logout callback
 setLogoutCallback(() => {
   router.push('/login');
 });
 
-// Ambil CSRF cookie dan cek user
-(async () => {
-  try {
-    await axios.get('/sanctum/csrf-cookie');
-    console.log('CSRF cookie loaded');
-  } catch (error) {
-    console.warn('Failed to load CSRF cookie', error);
-  }
+// Hanya ambil CSRF cookie
+axios.get('/sanctum/csrf-cookie')
+  .then(() => console.log('CSRF cookie loaded'))
+  .catch(err => console.warn('Failed to load CSRF cookie', err));
 
-  try {
-    await store.dispatch('auth/fetchUser');
-    console.log('User fetched');
-  } catch (error) {
-    console.log('User not authenticated', error);
-  } finally {
-    new Vue({
-      router,
-      store,
-      render: h => h(App)
-    }).$mount('#app');
-  }
-})();
+// Mount Vue tanpa menunggu fetchUser
+new Vue({
+  router,
+  store,
+  render: h => h(App)
+}).$mount('#app');

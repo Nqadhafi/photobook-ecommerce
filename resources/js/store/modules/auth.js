@@ -18,7 +18,7 @@ const mutations = {
   CLEAR_AUTH(state) {
     state.user = null;
     state.isAuthenticated = false;
-    state.userFetched = false;
+    // state.userFetched = false;
   },
   SET_USER_FETCHED(state, status) {
     state.userFetched = status;
@@ -60,19 +60,19 @@ const actions = {
     }
   },
 
-  async fetchUser({ commit, state }) {
-    if (state.userFetched) return;
+async fetchUser({ commit, state }) {
+  if (state.userFetched) return;
 
-    try {
-      const user = await authService.getUser();
-      commit('SET_USER', user);
-      commit('SET_AUTHENTICATED', true);
-    } catch (error) {
-      commit('CLEAR_AUTH');
-    } finally {
-      commit('SET_USER_FETCHED', true);
-    }
+  try {
+    const user = await authService.getUser();
+    commit('SET_USER', user);
+    commit('SET_AUTHENTICATED', true);
+  } catch (error) {
+    commit('SET_AUTHENTICATED', false); // ❗ Penting: tetap false
+  } finally {
+    commit('SET_USER_FETCHED', true); // ✅ Wajib true
   }
+},
 };
 
 const getters = {
