@@ -1,8 +1,16 @@
+// services/api.js
 import axios from 'axios';
+
+// Callback untuk logout (dikirim dari app.js)
+let logoutCallback = null;
+
+export const setLogoutCallback = (callback) => {
+  logoutCallback = callback;
+};
 
 const api = axios.create({
   baseURL: '/api',
-  withCredentials: true, // Ini penting untuk cookies
+  withCredentials: true,
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
@@ -13,7 +21,6 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   config => {
-    // Tambahkan CSRF token dari meta tag
     const token = document.head.querySelector('meta[name="csrf-token"]');
     if (token) {
       config.headers['X-CSRF-TOKEN'] = token.content;
@@ -28,12 +35,10 @@ api.interceptors.response.use(
   response => response,
   error => {
     if (error.response?.status === 419) {
-      // CSRF token mismatch
-      console.log('CSRF token mismatch, please refresh the page');
+      console.warn('CSRF token mismatch. Refresh the page.');
     }
-    if (error.response?.status === 401) {
-      // Handle unauthorized - redirect to login
-      window.location.href = '/login';
+    if (error.response?.status === 401 && logoutCallback) {
+      logoutCallback();
     }
     return Promise.reject(error);
   }

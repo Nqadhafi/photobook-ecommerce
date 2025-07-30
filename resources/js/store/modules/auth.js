@@ -1,8 +1,10 @@
+// store/modules/auth.js
 import authService from '../../services/authService';
 
 const state = {
   user: null,
-  isAuthenticated: false
+  isAuthenticated: false,
+  userFetched: false
 };
 
 const mutations = {
@@ -16,6 +18,10 @@ const mutations = {
   CLEAR_AUTH(state) {
     state.user = null;
     state.isAuthenticated = false;
+    state.userFetched = false;
+  },
+  SET_USER_FETCHED(state, status) {
+    state.userFetched = status;
   }
 };
 
@@ -25,6 +31,7 @@ const actions = {
       const response = await authService.login(credentials);
       commit('SET_USER', response.user);
       commit('SET_AUTHENTICATED', true);
+      commit('SET_USER_FETCHED', true);
       return response;
     } catch (error) {
       throw error;
@@ -36,6 +43,7 @@ const actions = {
       const response = await authService.register(userData);
       commit('SET_USER', response.user);
       commit('SET_AUTHENTICATED', true);
+      commit('SET_USER_FETCHED', true);
       return response;
     } catch (error) {
       throw error;
@@ -45,24 +53,24 @@ const actions = {
   async logout({ commit }) {
     try {
       await authService.logout();
-      commit('CLEAR_AUTH');
-      return { message: 'Logged out successfully' };
     } catch (error) {
-      // Tetap clear auth meski API error
+      // Tetap lanjutkan meski error
+    } finally {
       commit('CLEAR_AUTH');
-      throw error;
     }
   },
 
-  async fetchUser({ commit }) {
+  async fetchUser({ commit, state }) {
+    if (state.userFetched) return;
+
     try {
       const user = await authService.getUser();
       commit('SET_USER', user);
       commit('SET_AUTHENTICATED', true);
-      return user;
     } catch (error) {
       commit('CLEAR_AUTH');
-      throw error;
+    } finally {
+      commit('SET_USER_FETCHED', true);
     }
   }
 };
