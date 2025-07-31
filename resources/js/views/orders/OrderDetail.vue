@@ -40,7 +40,7 @@
             <b-row>
               <b-col md="6">
                 <p class="mb-1"><strong>Date:</strong> {{ formatDate(order.created_at) }}</p>
-                <p class="mb-1"><strong>Total Amount:</strong> <strong>Rp {{ formatCurrency(order.total_amount) }}</strong></p>
+                <p class="mb-1"><strong>Total Amount:</strong> <strong>{{ formatCurrency(order.total_amount) }}</strong></p>
               </b-col>
               <b-col md="6">
                 <p class="mb-1"><strong>Name:</strong> {{ order.customer_name }}</p>
@@ -69,12 +69,12 @@
                     <h6 class="mb-1">{{ item.product ? item.product.name : 'No Product' }}</h6>
                     <p class="text-muted small mb-0">
                       Template: {{ item.template ? item.template.name : 'N/A' }}<br>
-                      Qty: {{ item.quantity }} &times; Rp {{ formatCurrency(item.price) }}
+                      Qty: {{ item.quantity }} &times; {{ formatCurrency(item.price) }}
                       <span v-if="!item.design_same">(Different designs)</span>
                     </p>
                   </b-col>
                   <b-col md="4" class="text-md-right">
-                    <strong>Rp {{ formatCurrency(item.quantity * item.price) }}</strong>
+                    <strong> {{ formatCurrency(item.quantity * item.price) }}</strong>
                   </b-col>
                 </b-row>
               </b-list-group-item>
@@ -103,19 +103,18 @@
             </b-alert>
               <!-- --- Tombol Cancel Order --- -->
   <hr>
-  <b-alert v-if="cancelError" variant="danger" dismissible @dismissed="cancelError = null" class="mt-3">
-    {{ cancelError }}
-  </b-alert>
-  <b-button 
-    variant="outline-danger" 
-    block
-    @click="cancelOrder"
-    :disabled="isCancelling"
-    size="sm"
-  >
-    <b-spinner v-if="isCancelling" small></b-spinner>
-    {{ isCancelling ? 'Cancelling...' : 'Cancel Order' }}
-  </b-button>
+<b-button
+  v-if="order && order.status === 'pending'"
+  variant="outline-danger"
+  block
+  size="sm"
+  @click="cancelOrder"
+  :disabled="isCancelling"
+  class="mb-2"
+>
+ <b-spinner v-if="isCancelling" small></b-spinner>
+ {{ isCancelling ? 'Cancelling...' : 'Cancel Order' }}
+</b-button>
   <!-- -------------------------- -->
             <!-- Payment Instructions/Info for Pending Orders -->
             <div v-if="order.status === 'pending' && snapToken">
@@ -129,7 +128,7 @@
                 class="mb-2"
               >
                 <b-spinner v-if="isPaying" small></b-spinner>
-                {{ isPaying ? 'Opening Payment...' : 'Pay Now (Rp ' + formatCurrency(order.total_amount) + ')' }}
+                {{ isPaying ? 'Opening Payment...' : 'Pay Now ( ' + formatCurrency(order.total_amount) + ')' }}
               </b-button>
               <p class="text-muted small mb-0"><b-icon icon="info-circle"></b-icon> You will be redirected to Midtrans secure payment page.</p>
             </div>
