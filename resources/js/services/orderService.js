@@ -10,6 +10,16 @@ class OrderService {
     }
   }
 
+    async cancelOrder(orderId) {
+    try {
+      // Endpoint sesuai dengan yang didefinisikan di routes/api.php
+      const response = await api.post(`/orders/${orderId}/cancel`); 
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Failed to cancel order' };
+    }
+  }
+
   async getOrders(params = {}) {
     try {
       const response = await api.get('/orders', { params });

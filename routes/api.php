@@ -60,6 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders', [OrderHistoryController::class, 'index']);
     Route::get('/orders/{order}', [OrderHistoryController::class, 'show']);
     Route::get('/orders/{order}/timeline', [OrderHistoryController::class, 'timeline']);
+    Route::post('/orders/{order}/cancel', [PhotobookOrderController::class, 'cancelOrder']);
 // Route untuk Webhook Midtrans (TIDAK menggunakan auth middleware)
 // Midtrans akan mengakses ini secara langsung
 Route::post('/webhook/midtrans', [MidtransWebhookController::class, 'handle'])

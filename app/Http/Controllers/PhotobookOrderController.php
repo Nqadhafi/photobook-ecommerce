@@ -218,4 +218,64 @@ class PhotobookOrderController extends Controller
             return response()->json(['error' => 'Failed to upload files. Please try again.'], 500);
         }
     }
+
+        public function cancelOrder(Request $request, PhotobookOrder $order): JsonResponse
+    {
+        $user = $request->user();
+
+        // 1. Authorization: Pastikan user memiliki order ini
+        if ($user->id !== $order->user_id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // 2. Validasi status order: Hanya bisa dibatalkan jika statusnya 'pending'
+        if ($order->status !== 'pending') {
+            return response()->json(['error' => 'Order cannot be cancelled at this stage.'], 400);
+        }
+
+        try {
+            // 3. Update status order dalam transaction database untuk konsistensi
+            // Misalnya, jika ada logika tambahan atau notifikasi yang kompleks
+            return DB::transaction(function () use ($order, $user) {
+                $order->update([
+                    'status' => 'cancelled',
+                    'cancelled_at' => now(),
+                ]);
+
+                // 4. (Opsional) Update status pembayaran terkait jika ada dan perlu
+                // Misalnya, tandai bahwa pembayaran dibatalkan di sisi merchant
+                $payment = $order->payment; // Asumsi relasi 'payment' ada
+                if ($payment) {
+                    $payment->update(['transaction_status' => 'cancel']);
+                }
+
+                // 5. Kirim notifikasi ke customer
+                $this->notificationService->notifyCustomer(
+                    $user,
+                    'Order Cancelled',
+                    "Your order #{$order->order_number} has been successfully cancelled.",
+                    $order
+                );
+
+                // 6. (Opsional) Kirim notifikasi ke admin
+                $this->notificationService->notifyAdmin(
+                    'Order Cancelled by User',
+                    "Order #{$order->order_number} has been cancelled by the customer.",
+                    $order
+                );
+
+                // 7. Kembalikan response sukses
+                 // Load relasi yang mungkin dibutuhkan oleh frontend setelah pembatalan
+                $order->load('items'); // Atau relasi lain yang relevan
+
+                return response()->json([
+                    'message' => 'Order cancelled successfully.',
+                    'data' => $order // Kembalikan data order yang sudah diperbarui
+                ], 200);
+            });
+        } catch (\Exception $e) {
+            Log::error('Order Cancellation Exception: ' . $e->getMessage(), ['order_id' => $order->id, 'user_id' => $user->id]);
+            return response()->json(['error' => 'Failed to cancel order. Please try again.'], 500);
+        }
+    }
 }

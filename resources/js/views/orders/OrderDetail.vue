@@ -101,7 +101,22 @@
             <b-alert v-if="paymentError" variant="danger" dismissible @dismissed="paymentError = ''" class="mb-3">
               {{ paymentError }}
             </b-alert>
-
+              <!-- --- Tombol Cancel Order --- -->
+  <hr>
+  <b-alert v-if="cancelError" variant="danger" dismissible @dismissed="cancelError = null" class="mt-3">
+    {{ cancelError }}
+  </b-alert>
+  <b-button 
+    variant="outline-danger" 
+    block
+    @click="cancelOrder"
+    :disabled="isCancelling"
+    size="sm"
+  >
+    <b-spinner v-if="isCancelling" small></b-spinner>
+    {{ isCancelling ? 'Cancelling...' : 'Cancel Order' }}
+  </b-button>
+  <!-- -------------------------- -->
             <!-- Payment Instructions/Info for Pending Orders -->
             <div v-if="order.status === 'pending' && snapToken">
               <p class="text-muted small mb-2">Complete your payment to proceed with your order.</p>
@@ -211,6 +226,8 @@ export default {
       loading: false,
       error: null,
       paymentError: null,
+      isCancelling: false,
+      cancelError: null,
       isPaying: false,
       snapToken: null // Akan diambil dari data order
     };
@@ -228,6 +245,42 @@ export default {
     await this.loadOrder();
   },
   methods: {
+
+
+    async cancelOrder() {
+      if (!this.order) return;
+
+      // Konfirmasi dari pengguna (opsional tapi disarankan)
+      const confirmed = window.confirm(`Are you sure you want to cancel order #${this.order.order_number}? This action cannot be undone.`);
+      if (!confirmed) return;
+
+      this.isCancelling = true;
+      this.cancelError = null;
+      try {
+         // Gunakan orderService yang sudah diperbarui
+         await orderService.cancelOrder(this.order.id); 
+         
+         // Tampilkan notifikasi sukses
+         this.$store.dispatch('showNotification', {
+            title: 'Order Cancelled',
+            message: `Order #${this.order.order_number} has been cancelled.`,
+            type: 'success'
+         });
+
+         // Refresh data order untuk mendapatkan status terbaru
+         await this.loadOrder();
+      } catch (error) {
+         console.error('Failed to cancel order:', error);
+         this.cancelError = error.message || 'Failed to cancel order. Please try again.';
+         this.$store.dispatch('showNotification', {
+            title: 'Cancellation Failed',
+            message: this.cancelError,
+            type: 'danger'
+         });
+      } finally {
+         this.isCancelling = false;
+      }
+    },    
     async loadOrder() {
       this.loading = true;
       this.error = null;

@@ -155,9 +155,40 @@ class MidtransService
                     $order
                 );
             }
+        } elseif ($transactionStatus == 'expire') {
+            if ($order->status === 'pending') { // Hanya update jika status masih pending
+                $order->update([
+                    'status' => 'cancelled', // Atau buat status khusus 'expired' jika diinginkan
+                    'cancelled_at' => now() // Pastikan ada field cancelled_at di tabel orders
+                ]);
+
+                // Opsional: Kirim notifikasi ke customer
+                $this->notificationService->notifyCustomer(
+                    $order->user,
+                    'Order Cancelled (Expired)',
+                    "Your order #{$order->order_number} has been cancelled because the payment was not completed within the allocated time.",
+                    $order
+                );
+
+                // Opsional: Notifikasi ke admin
+                // $this->notificationService->notifyAdmin(...);
+            }
+        } elseif ($transactionStatus == 'cancel' || $transactionStatus == 'deny') { // Tambahkan 'deny' jika perlu
+            if ($order->status === 'pending') { // Hanya update jika status masih pending
+                $order->update([
+                    'status' => 'cancelled',
+                    'cancelled_at' => now()
+                ]);
+
+                // Opsional: Kirim notifikasi ke customer
+                $this->notificationService->notifyCustomer(
+                    $order->user,
+                    'Order Cancelled',
+                    "Your order #{$order->order_number} has been cancelled.",
+                    $order
+                );
+            }
         }
 
-        // Tambahkan logika untuk status lain jika diperlukan (expire, cancel, dll)
-        // Misalnya, jika expire, ubah status order ke cancelled.
     }
 }
