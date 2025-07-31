@@ -50,6 +50,13 @@
             </b-row>
           </b-card>
 
+                    <!-- Order Timeline Component -->
+          <b-card class="mb-4">
+            <b-card-title>
+              <b-icon icon="kanban"></b-icon> Order Progress<span v-if="order">#{{ order.order_number }}</span>
+            </b-card-title>
+            <OrderTimeline/>
+          </b-card>
           <!-- Order Items -->
           <b-card class="mb-4">
             <b-card-title><b-icon icon="list"></b-icon> Order Items</b-card-title>
@@ -196,15 +203,6 @@
             >
               <b-icon icon="arrow-left"></b-icon> Back to Orders
             </b-button>
-            
-            <b-button
-              variant="outline-info"
-              block
-              size="sm"
-              :to="{ name: 'OrderTimeline', params: { id: order.id } }"
-            >
-              <b-icon icon="clock-history"></b-icon> View Order Timeline
-            </b-button>
           </b-card>
 
         </b-col>
@@ -216,9 +214,13 @@
 <script>
 import orderService from '../../services/orderService';
 import { loadScript } from '../../utils/helpers'; // Pastikan file helpers.js ada
+import OrderTimeline from './OrderTimeline.vue'; // <-- Impor komponen
 
 export default {
   name: 'OrderDetail',
+    components: {
+    OrderTimeline // <-- Daftarkan komponen
+  },
   data() {
     return {
       order: null,
@@ -356,7 +358,7 @@ export default {
                 // Untuk sekarang, kita hanya menghentikan indikator loading.
                 this.isPaying = false;
                  // Opsional: Refresh status order dari backend?
-                 // this.loadOrder();
+                 this.loadOrder();
             }
         });
       } catch (error) {
