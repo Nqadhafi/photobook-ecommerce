@@ -5,27 +5,33 @@ class AuthService {
   async login(credentials) {
     try {
       const response = await api.post('/auth/login', credentials);
+      localStorage.setItem('token', response.data.token);
+      api.defaults.headers.common['Authorization'] = 'Bearer ' + response.data.token;
+
       return response.data;
     } catch (error) {
       throw error.response?.data || { error: 'Login failed' };
     }
   }
 
-  async register(userData) {
-    try {
-      const response = await api.post('/auth/register', userData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { error: 'Registration failed' };
-    }
+async register(userData) {
+  try {
+    const response = await api.post('/auth/register', userData);
+    return response.data; // Hanya kembalikan data
+  } catch (error) {
+    throw error.response?.data || { error: 'Registration failed' };
   }
+}
 
   async logout() {
     try {
-      const response = await api.post('/auth/logout');
-      return response.data;
+      await api.post('/auth/logout');
     } catch (error) {
-      throw error.response?.data || { error: 'Logout failed' };
+      // Tetap lanjutkan
+    } finally {
+      // ❗ Hapus token
+      localStorage.removeItem('token');
+      delete api.defaults.headers.common['Authorization'];
     }
   }
 
@@ -37,6 +43,7 @@ class AuthService {
       throw error.response?.data || { error: 'Failed to get user data' };
     }
   }
+
 
   async updateProfile(profileData) {
     try {
