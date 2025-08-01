@@ -114,7 +114,7 @@ export default {
 
       try {
         await this.register(this.form);
-        this.$router.push({ name: 'Dashboard' });
+        this.$router.push({ name: 'Login' });
         this.$store.dispatch('showNotification', {
           title: 'Success',
           message: 'Account created successfully!',

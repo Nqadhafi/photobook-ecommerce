@@ -41,9 +41,9 @@ const actions = {
   async register({ commit }, userData) {
     try {
       const response = await authService.register(userData);
-      commit('SET_USER', response.user);
-      commit('SET_AUTHENTICATED', true);
-      commit('SET_USER_FETCHED', true);
+      // commit('SET_USER', response.user);
+      // commit('SET_AUTHENTICATED', true);
+      // commit('SET_USER_FETCHED', true);
       return response;
     } catch (error) {
       throw error;

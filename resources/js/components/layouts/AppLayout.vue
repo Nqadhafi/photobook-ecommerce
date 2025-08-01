@@ -18,7 +18,8 @@
         v-for="notification in $store.getters.notifications"
         :key="notification.id"
         :variant="notification.type || 'info'"
-        :show="true"
+        :show="3"
+        fade
         dismissible
         @dismissed="$store.commit('REMOVE_NOTIFICATION', notification.id)"
         class="position-fixed"

@@ -22,8 +22,24 @@
           </b-card>
         </b-col>
       </b-row>
+          <div class="notification-container">
+      <b-alert 
+        v-for="notification in $store.getters.notifications"
+        :key="notification.id"
+        :variant="notification.type || 'info'"
+        :show="true"
+        dismissible
+        @dismissed="$store.commit('REMOVE_NOTIFICATION', notification.id)"
+        class="position-fixed"
+        style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;"
+      >
+        <strong>{{ notification.title }}</strong>
+        <p class="mb-0">{{ notification.message }}</p>
+      </b-alert>
+    </div>
     </b-container>
   </div>
+  
 </template>
 
 <script>
