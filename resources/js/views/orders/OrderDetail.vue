@@ -8,7 +8,6 @@
           <p class="mt-3">Loading order details...</p>
         </b-col>
       </b-row>
-
       <!-- Error State -->
       <b-row v-else-if="error">
         <b-col cols="12">
@@ -21,13 +20,11 @@
           </b-alert>
         </b-col>
       </b-row>
-
       <!-- Order Detail -->
       <b-row v-else-if="order">
         <b-col cols="12">
           <b-breadcrumb :items="breadcrumbItems"></b-breadcrumb>
         </b-col>
-
         <b-col lg="8">
           <!-- Order Summary Card -->
           <b-card class="mb-4">
@@ -49,8 +46,7 @@
               </b-col>
             </b-row>
           </b-card>
-
-                    <!-- Order Timeline Component -->
+          <!-- Order Timeline Component -->
           <b-card class="mb-4">
             <b-card-title>
               <b-icon icon="kanban"></b-icon> Order Progress<span v-if="order">#{{ order.order_number }}</span>
@@ -74,11 +70,25 @@
                   </b-col>
                   <b-col md="6">
                     <h6 class="mb-1">{{ item.product ? item.product.name : 'No Product' }}</h6>
+                    <!-- --- PERUBAHAN: Tampilkan informasi slot foto --- -->
                     <p class="text-muted small mb-0">
                       Template: {{ item.template ? item.template.name : 'N/A' }}<br>
                       Qty: {{ item.quantity }} &times; {{ formatCurrency(item.price) }}
-                      <span v-if="!item.design_same">(Different designs)</span>
+                      <span v-if="!item.design_same">(Different designs)</span><br>
+                      <span v-if="item.template && item.template.layout_data && item.template.layout_data.photo_slots !== undefined">
+                        <b-icon icon="images" class="mr-1"></b-icon>
+                        Required Photos:
+                        <strong>
+                          {{ getTotalPhotoSlotsForItem(item) }}
+                          ({{ item.template.layout_data.photo_slots }} per book)
+                        </strong>
+                      </span>
+                      <span v-else-if="item.template">
+                        <b-icon icon="images" class="mr-1"></b-icon>
+                        Required Photos: <strong>N/A</strong>
+                      </span>
                     </p>
+                     <!-- --- AKHIR PERUBAHAN --- -->
                   </b-col>
                   <b-col md="4" class="text-md-right">
                     <strong> {{ formatCurrency(item.quantity * item.price) }}</strong>
@@ -87,7 +97,6 @@
               </b-list-group-item>
             </b-list-group>
           </b-card>
-
           <!-- Customer Address -->
           <b-card class="mb-4">
             <b-card-title><b-icon icon="geo-alt"></b-icon> Shipping Address</b-card-title>
@@ -99,12 +108,10 @@
             </address>
           </b-card>
         </b-col>
-
         <b-col lg="4">
           <!-- Payment & Actions Card -->
           <b-card class="sticky-top" style="top: 20px;">
             <b-card-title><b-icon icon="credit-card"></b-icon> Payment & Actions</b-card-title>
-            
             <b-alert v-if="paymentError" variant="danger" dismissible @dismissed="paymentError = ''" class="mb-3">
               {{ paymentError }}
             </b-alert>
@@ -126,9 +133,9 @@
             <!-- Payment Instructions/Info for Pending Orders -->
             <div v-if="order.status === 'pending' && snapToken">
               <p class="text-muted small mb-2">Complete your payment to proceed with your order.</p>
-              <b-button 
-                variant="success" 
-                size="lg" 
+              <b-button
+                variant="success"
+                size="lg"
                 block
                 @click="initiatePayment"
                 :disabled="isPaying"
@@ -139,30 +146,35 @@
               </b-button>
               <p class="text-muted small mb-0"><b-icon icon="info-circle"></b-icon> You will be redirected to Midtrans secure payment page.</p>
             </div>
-            
             <div v-else-if="order.status === 'pending' && !snapToken">
               <b-alert variant="warning" show class="mb-3">
                 Payment information is not available. Please contact support or try refreshing the page.
               </b-alert>
             </div>
-            
             <!-- Success Message for Paid Orders -->
+            <!-- --- PERUBAHAN: Tambahkan validasi slot foto --- -->
             <div v-else-if="order.status === 'paid'">
               <b-alert variant="success" show class="mb-3">
                 <b-icon icon="check-circle"></b-icon> <strong>Payment Successful!</strong><br>
                 <small class="text-muted">Paid on {{ formatDate(order.paid_at) }}</small>
               </b-alert>
               <p class="mb-2">Thank you for your payment. You can now upload your design files.</p>
-              <b-button 
-                variant="primary" 
+              <b-button
+                variant="primary"
                 :to="{ name: 'FileUpload', params: { id: order.id } }"
                 block
                 class="mb-2"
+                :disabled="!arePhotoSlotsDefinedForAllItems"
+                :title="arePhotoSlotsDefinedForAllItems ? '' : 'Upload disabled: Template information missing for one or more items.'"
               >
                 <b-icon icon="cloud-upload"></b-icon> Upload Design Files
               </b-button>
+              <b-alert v-if="!arePhotoSlotsDefinedForAllItems" variant="warning" show class="small">
+                <b-icon icon="exclamation-triangle"></b-icon>
+                Upload is disabled because template photo slot information is missing for one or more items. Please contact support.
+              </b-alert>
             </div>
-            
+            <!-- --- AKHIR PERUBAHAN --- -->
             <!-- Message for Cancelled Orders -->
             <div v-else-if="order.status === 'cancelled'">
               <b-alert variant="danger" show class="mb-3">
@@ -171,8 +183,8 @@
               </b-alert>
               <p class="mb-2">Your order has been cancelled. If you have any questions, please contact support.</p>
             </div>
-            
             <!-- Message for Other Statuses (e.g., file_upload, processing) -->
+             <!-- --- PERUBAHAN: Tambahkan validasi slot foto untuk status file_upload --- -->
              <div v-else>
               <b-alert :variant="getStatusVariant(order.status)" show class="mb-3">
                 <strong>{{ formatStatus(order.status) }}</strong>
@@ -180,19 +192,24 @@
               <p class="mb-2">Your order is currently in the <strong>{{ formatStatus(order.status) }}</strong> status.</p>
               <!-- Tambahkan aksi atau informasi spesifik untuk status lain jika diperlukan -->
               <div v-if="order.status === 'file_upload'">
-                 <b-button 
-                    variant="primary" 
+                 <b-button
+                    variant="primary"
                     :to="{ name: 'FileUpload', params: { id: order.id } }"
                     block
                     class="mb-2"
+                    :disabled="!arePhotoSlotsDefinedForAllItems"
+                    :title="arePhotoSlotsDefinedForAllItems ? '' : 'Upload disabled: Template information missing for one or more items.'"
                   >
                     <b-icon icon="cloud-upload"></b-icon> Upload Design Files
                   </b-button>
+                  <b-alert v-if="!arePhotoSlotsDefinedForAllItems" variant="warning" show class="small">
+                    <b-icon icon="exclamation-triangle"></b-icon>
+                    Upload is disabled because template photo slot information is missing for one or more items. Please contact support.
+                  </b-alert>
               </div>
             </div>
-
+             <!-- --- AKHIR PERUBAHAN --- -->
             <hr>
-
             <!-- General Actions -->
             <b-button
               variant="outline-primary"
@@ -204,18 +221,15 @@
               <b-icon icon="arrow-left"></b-icon> Back to Orders
             </b-button>
           </b-card>
-
         </b-col>
       </b-row>
     </b-container>
   </app-layout>
 </template>
-
 <script>
 import orderService from '../../services/orderService';
 import { loadScript } from '../../utils/helpers'; // Pastikan file helpers.js ada
 import OrderTimeline from './OrderTimeline.vue'; // <-- Impor komponen
-
 export default {
   name: 'OrderDetail',
     components: {
@@ -240,34 +254,47 @@ export default {
         { text: 'Orders', to: { name: 'Orders' } },
         { text: `Order #${this.order ? this.order.order_number : '...'}`, active: true }
       ];
+    },
+    // --- PERUBAHAN: Tambahkan computed property untuk validasi slot foto --- //
+    /**
+     * Checks if photo slot information is defined for all order items.
+     * @returns {boolean} True if all items have defined photo slots, false otherwise.
+     */
+    arePhotoSlotsDefinedForAllItems() {
+      if (!this.order || !this.order.items || this.order.items.length === 0) {
+        return false;
+      }
+
+      return this.order.items.every(item => {
+        // Check if template exists and has layout_data with photo_slots
+        return item.template &&
+               item.template.layout_data &&
+               item.template.layout_data.photo_slots !== undefined &&
+               item.template.layout_data.photo_slots !== null;
+      });
     }
+    // --- AKHIR PERUBAHAN --- //
   },
   async created() {
     await this.loadOrder();
   },
   methods: {
-
-
     async cancelOrder() {
       if (!this.order) return;
-
       // Konfirmasi dari pengguna (opsional tapi disarankan)
       const confirmed = window.confirm(`Are you sure you want to cancel order #${this.order.order_number}? This action cannot be undone.`);
       if (!confirmed) return;
-
       this.isCancelling = true;
       this.cancelError = null;
       try {
          // Gunakan orderService yang sudah diperbarui
-         await orderService.cancelOrder(this.order.id); 
-         
+         await orderService.cancelOrder(this.order.id);
          // Tampilkan notifikasi sukses
          this.$store.dispatch('showNotification', {
             title: 'Order Cancelled',
             message: `Order #${this.order.order_number} has been cancelled.`,
             type: 'success'
          });
-
          // Refresh data order untuk mendapatkan status terbaru
          await this.loadOrder();
       } catch (error) {
@@ -281,7 +308,7 @@ export default {
       } finally {
          this.isCancelling = false;
       }
-    },    
+    },
     async loadOrder() {
       this.loading = true;
       this.error = null;
@@ -290,12 +317,10 @@ export default {
         const orderId = this.$route.params.id;
         const response = await orderService.getOrder(orderId);
         this.order = response.data;
-
         // --- Ambil snap_token ---
         // Asumsi backend mengirim snap_token dalam response order
         // Ini bisa dalam `order.snap_token` atau melalui relasi `order.payment.snap_token`
         // Periksa struktur respons dari `PhotobookOrderController@checkout`
-        
         // Cara 1: Jika snap_token dikirim langsung di level order
         if (this.order.snap_token) {
             this.snapToken = this.order.snap_token;
@@ -305,7 +330,6 @@ export default {
             this.snapToken = this.order.payment.snap_token;
         }
         // Jika tidak ditemukan, snapToken tetap null, dan komponen akan menangani kasus ini
-        
       } catch (error) {
         console.error('Failed to load order:', error);
         this.error = error.message || 'Failed to load order details. Please try again.';
@@ -319,7 +343,6 @@ export default {
         console.error('Snap token is missing for order:', this.order?.id);
         return;
       }
-
       this.isPaying = true;
       this.paymentError = null;
       try {
@@ -330,12 +353,10 @@ export default {
             throw new Error('MIDTRANS_CLIENT_KEY is not configured in .env file.');
         }
         await loadScript('https://app.sandbox.midtrans.com/snap/snap.js', 'data-client-key', clientKey);
-        
         // --- 2. Pastikan window.snap tersedia ---
         if (typeof window.snap === 'undefined') {
             throw new Error('Failed to load Midtrans Snap.js. Please check your internet connection and try again.');
         }
-
         // --- 3. Buka halaman pembayaran Snap ---
         window.snap.pay(this.snapToken, {
             onSuccess: (result) => {
@@ -370,7 +391,6 @@ export default {
     handlePaymentOutcome(outcome, result) {
         // --- Tangani hasil pembayaran dari callback Snap.js ---
         this.isPaying = false;
-        
         // Tampilkan notifikasi berdasarkan outcome
         let notification = { title: '', message: '', type: '' };
         if (outcome === 'success') {
@@ -406,7 +426,6 @@ export default {
             };
             // Tidak perlu refresh otomatis untuk error
         }
-
         if (notification.title) {
             this.$store.dispatch('showNotification', notification);
         }
@@ -455,11 +474,33 @@ export default {
     },
     onItemImageError(event) {
       event.target.src = 'https://www.aaronfaber.com/wp-content/uploads/2017/03/product-placeholder-wp.jpg';
-    }
+    },
+    // --- PERUBAHAN: Tambahkan helper method untuk menghitung slot per item --- //
+    /**
+     * Calculates the total number of photo slots required for an order item.
+     * @param {Object} item - The order item object.
+     * @returns {number|null} Total slots required, or null if data is missing.
+     */
+    getTotalPhotoSlotsForItem(item) {
+      if (!item.template || !item.template.layout_data) {
+        return null;
+      }
+
+      const photoSlotsPerBook = item.template.layout_data.photo_slots;
+      if (photoSlotsPerBook === undefined || photoSlotsPerBook === null) {
+        return null;
+      }
+
+      // If design_same is true, only one set of photos is needed regardless of quantity
+      // If design_same is false, each book needs its own set of photos
+      const numberOfSets = item.design_same ? 1 : item.quantity;
+
+      return photoSlotsPerBook * numberOfSets;
+    },
+    // --- AKHIR PERUBAHAN --- //
   }
 };
 </script>
-
 <style scoped>
 .product-thumbnail {
   max-height: 80px;
