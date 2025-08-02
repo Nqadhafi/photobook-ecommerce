@@ -147,7 +147,8 @@ class PhotobookOrderController extends Controller
         }
 
         // 2. Validasi status order
-        if ($order->status !== 'paid') {
+        // Izinkan upload untuk status 'paid' dan 'file_upload'
+        if (!in_array($order->status, ['paid', 'file_upload'])) {
             return response()->json(['error' => 'Order is not eligible for file upload.'], 400);
         }
 
@@ -170,52 +171,108 @@ class PhotobookOrderController extends Controller
         }
 
         $validatedData = $validator->validated();
+        $uploadedFiles = []; // Untuk menyimpan data file yang berhasil diupload
+        $filesToProcess = $validatedData['files'];
 
         try {
-            // 4. Proses upload file
-            foreach ($validatedData['files'] as $fileData) {
-                $uploadedFile = $fileData['file'];
-                $orderItemId = $fileData['order_item_id'];
+            // 4. Proses upload file dalam transaksi database untuk konsistensi
+            $uploadedFiles = DB::transaction(function () use ($filesToProcess, $order) {
+                $uploadedInTransaction = [];
 
-                // Buat nama file unik
-                $filename = uniqid() . '_' . time() . '.' . $uploadedFile->getClientOriginalExtension();
+                foreach ($filesToProcess as $fileData) {
+                    $uploadedFile = $fileData['file'];
+                    $orderItemId = $fileData['order_item_id'];
 
-                // Simpan file ke disk 'public' di folder 'uploads/files'
-                // Disk 'public' harus dikonfigurasi di config/filesystems.php
-                $path = $uploadedFile->storeAs('uploads/files', $filename, 'public');
+                    // Buat nama file unik
+                    $filename = uniqid() . '_' . time() . '.' . $uploadedFile->getClientOriginalExtension();
 
-                // 5. Simpan informasi file ke database
-                PhotobookOrderFile::create([
-                    'order_id' => $order->id,
-                    'order_item_id' => $orderItemId,
-                    'file_path' => $path, // Path relatif dari disk 'public'
-                    'status' => 'uploaded', // Atau 'confirmed' jika tidak perlu review admin
-                    'uploaded_at' => now(),
-                ]);
+                    // --- UPLOAD KE CLOUDFLARE R2 ---
+                    // Simpan file ke disk 'r2' yang telah dikonfigurasi
+                    $pathInR2 = $uploadedFile->storeAs('files', $filename, 'r2');
+                    // Contoh nilai $pathInR2: 'files/abc123_1678886400.jpg'
+                    // File sebenarnya di R2: 'uploads/files/abc123_1678886400.jpg' (karena config 'root' => 'uploads')
+
+                    // --- SIMPAN INFORMASI FILE KE DATABASE ---
+                    $fileRecord = PhotobookOrderFile::create([
+                        'order_id' => $order->id,
+                        'order_item_id' => $orderItemId,
+                        'file_path' => $pathInR2, // Simpan path relatif dari root bucket R2
+                        // Opsional: Simpan informasi tambahan
+                        'original_name' => $uploadedFile->getClientOriginalName(),
+                        'size' => $uploadedFile->getSize(),
+                        'mime_type' => $uploadedFile->getMimeType(),
+                        'status' => 'uploaded', // Atau 'confirmed' jika tidak perlu review admin
+                        'uploaded_at' => now(),
+                        // Jika Anda menyimpan URL publik di .env R2_URL:
+                        // 'public_url' => rtrim(env('R2_URL'), '/') . '/uploads/' . basename($pathInR2),
+                    ]);
+
+                    // Tambahkan ke array hasil sukses
+                    // Mengembalikan data yang relevan untuk frontend, termasuk ID record database
+                    $uploadedInTransaction[] = [
+                        'id' => $fileRecord->id, // ID dari record database
+                        'order_item_id' => $orderItemId,
+                        'original_name' => $fileRecord->original_name,
+                        'size' => $fileRecord->size,
+                        'file_path' => $fileRecord->file_path, // Path di R2
+                        // 'public_url' => $fileRecord->public_url, // Jika disimpan
+                    ];
+                }
+
+                return $uploadedInTransaction;
+            });
+
+            // 5. Kirim notifikasi setelah semua file berhasil diupload (di luar transaksi)
+            if (count($uploadedFiles) > 0) {
                 $this->notificationService->notifyCustomer(
                     $request->user(),
-                    'File Uploaded',
-                    "Your design file(s) for order #{$order->order_number} have been uploaded successfully.",
+                    'File(s) Uploaded',
+                    count($uploadedFiles) . " design file(s) for order #{$order->order_number} have been uploaded successfully.",
                     $order
                 );
                 $this->notificationService->notifyAdmin(
                     'Files Uploaded for Order',
-                    "New files have been uploaded for order #{$order->order_number}. Please review them.",
+                    count($uploadedFiles) . " new file(s) have been uploaded for order #{$order->order_number}. Please review them.",
                     $order
                 );
             }
 
-            // 6. (Opsional) Update status order
-            // Misalnya, jika semua item sudah punya file, ubah status ke 'file_upload' atau 'processing'
-            // Untuk sekarang, kita tidak ubah status dulu.
-            // Bisa ditambahkan logika ini nanti.
+            // 6. (Opsional) Update status order jika semua item sudah punya file
+            // Logika ini bisa disesuaikan. Contoh sederhana:
+            // Jika status awal 'paid' dan berhasil upload, ubah ke 'file_upload'
+            if ($order->status === 'paid' && count($uploadedFiles) > 0) {
+                 // Anda bisa menambahkan logika yang lebih kompleks di sini
+                 // Misalnya, periksa apakah semua item dalam order ini sudah memiliki file.
+                 // Untuk sekarang, kita asumsikan bahwa berhasil upload berarti siap untuk diproses.
+                 $order->update(['status' => 'file_upload']);
+                 // Atau langsung ke 'processing' jika memang sesuai logika bisnis Anda:
+                 // $order->update(['status' => 'processing']);
+            }
+            // Jika status sudah 'file_upload', tidak perlu diubah lagi.
 
-            // 7. Kembalikan response sukses
-            return response()->json(['message' => 'Files uploaded successfully'], 200);
+            // 7. Kembalikan response sukses dengan data file yang diupload
+            return response()->json([
+                'message' => count($uploadedFiles) . ' file(s) uploaded successfully',
+                'uploaded_count' => count($uploadedFiles),
+                'uploaded_files' => $uploadedFiles // Data file yang berhasil
+            ], 200);
+
         } catch (\Exception $e) {
-            // Log error jika perlu
-            Log::error('File Upload Error: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to upload files. Please try again.'], 500);
+            // 8. Penanganan error: Log error dengan detail
+            Log::error('File Upload Error (R2): ' . $e->getMessage(), [
+                'order_id' => $order->id,
+                'user_id' => $request->user()->id,
+                'exception' => $e
+            ]);
+
+            // Kembalikan error response yang umum
+            // Frontend dapat menggunakan ini untuk menawarkan retry.
+            return response()->json([
+                'error' => 'Failed to upload one or more files. Please try again.',
+                // Jika ingin lebih spesifik, bisa mengembalikan daftar file yang gagal
+                // tapi itu memerlukan logika pelacakan yang lebih kompleks di dalam loop.
+                // Untuk sekarang, pendekatan umum sudah cukup untuk trigger retry di frontend.
+            ], 500);
         }
     }
 
