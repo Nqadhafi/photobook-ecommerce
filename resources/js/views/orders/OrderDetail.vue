@@ -1,3 +1,4 @@
+<!-- resources/js/views/orders/OrderDetail.vue -->
 <template>
   <app-layout>
     <b-container>
@@ -151,28 +152,49 @@
                 Payment information is not available. Please contact support or try refreshing the page.
               </b-alert>
             </div>
-            <!-- Success Message for Paid Orders -->
-            <!-- --- PERUBAHAN: Tambahkan validasi slot foto --- -->
+            <!-- --- PERUBAHAN: Pesan untuk status 'paid' (menunggu folder) --- -->
             <div v-else-if="order.status === 'paid'">
-              <b-alert variant="success" show class="mb-3">
-                <b-icon icon="check-circle"></b-icon> <strong>Payment Successful!</strong><br>
+              <b-alert variant="info" show class="mb-3">
+                <b-icon icon="hourglass-split"></b-icon> <strong>Payment Successful!</strong><br>
                 <small class="text-muted">Paid on {{ formatDate(order.paid_at) }}</small>
               </b-alert>
-              <p class="mb-2">Thank you for your payment. You can now upload your design files.</p>
+              <p class="mb-2">
+                <b-icon icon="cloud-download"></b-icon>
+                Thank you for your payment. We are preparing your Google Drive folder for file uploads.
+                You will receive a notification and a WhatsApp message with the link once it's ready.
+              </p>
+              <b-alert variant="warning" show class="small mb-0">
+                <b-icon icon="info-circle"></b-icon>
+                Please wait for the folder link. The "Upload Design Files" feature within the app is no longer used.
+              </b-alert>
+            </div>
+            <!-- --- AKHIR PERUBAHAN --- -->
+            <!-- --- PERUBAHAN: Pesan dan tombol untuk status 'file_upload' (folder siap) --- -->
+            <div v-else-if="order.status === 'file_upload'">
+              <b-alert variant="success" show class="mb-3">
+                <b-icon icon="check-circle"></b-icon> <strong>Folder Ready!</strong><br>
+                <small class="text-muted">Status updated on {{ formatDate(order.updated_at) }}</small> <!-- Asumsi ada updated_at -->
+              </b-alert>
+              <p class="mb-2">
+                <b-icon icon="folder"></b-icon>
+                Your Google Drive folder has been created successfully.
+              </p>
               <b-button
+                v-if="order.google_drive_folder_url"
+                :href="order.google_drive_folder_url"
+                target="_blank"
                 variant="primary"
-                :to="{ name: 'FileUpload', params: { id: order.id } }"
                 block
                 class="mb-2"
-                :disabled="!arePhotoSlotsDefinedForAllItems"
-                :title="arePhotoSlotsDefinedForAllItems ? '' : 'Upload disabled: Template information missing for one or more items.'"
               >
-                <b-icon icon="cloud-upload"></b-icon> Upload Design Files
+                <b-icon icon="box-arrow-up-right"></b-icon> Open Google Drive Folder
               </b-button>
-              <b-alert v-if="!arePhotoSlotsDefinedForAllItems" variant="warning" show class="small">
-                <b-icon icon="exclamation-triangle"></b-icon>
-                Upload is disabled because template photo slot information is missing for one or more items. Please contact support.
+              <b-alert v-else variant="danger" show class="small mb-2">
+                <b-icon icon="exclamation-triangle"></b-icon> Folder link is missing. Please contact support.
               </b-alert>
+              <p class="text-muted small mb-0">
+                Please upload your design files to the Google Drive folder. Our team will verify the files after you finish uploading.
+              </p>
             </div>
             <!-- --- AKHIR PERUBAHAN --- -->
             <!-- Message for Cancelled Orders -->
@@ -183,32 +205,14 @@
               </b-alert>
               <p class="mb-2">Your order has been cancelled. If you have any questions, please contact support.</p>
             </div>
-            <!-- Message for Other Statuses (e.g., file_upload, processing) -->
-             <!-- --- PERUBAHAN: Tambahkan validasi slot foto untuk status file_upload --- -->
-             <div v-else>
+            <!-- Message for Other Statuses (e.g., processing, ready, completed) -->
+            <div v-else>
               <b-alert :variant="getStatusVariant(order.status)" show class="mb-3">
                 <strong>{{ formatStatus(order.status) }}</strong>
               </b-alert>
               <p class="mb-2">Your order is currently in the <strong>{{ formatStatus(order.status) }}</strong> status.</p>
               <!-- Tambahkan aksi atau informasi spesifik untuk status lain jika diperlukan -->
-              <div v-if="order.status === 'file_upload'">
-                 <b-button
-                    variant="primary"
-                    :to="{ name: 'FileUpload', params: { id: order.id } }"
-                    block
-                    class="mb-2"
-                    :disabled="!arePhotoSlotsDefinedForAllItems"
-                    :title="arePhotoSlotsDefinedForAllItems ? '' : 'Upload disabled: Template information missing for one or more items.'"
-                  >
-                    <b-icon icon="cloud-upload"></b-icon> Upload Design Files
-                  </b-button>
-                  <b-alert v-if="!arePhotoSlotsDefinedForAllItems" variant="warning" show class="small">
-                    <b-icon icon="exclamation-triangle"></b-icon>
-                    Upload is disabled because template photo slot information is missing for one or more items. Please contact support.
-                  </b-alert>
-              </div>
             </div>
-             <!-- --- AKHIR PERUBAHAN --- -->
             <hr>
             <!-- General Actions -->
             <b-button
@@ -220,6 +224,10 @@
             >
               <b-icon icon="arrow-left"></b-icon> Back to Orders
             </b-button>
+            <!-- --- HAPUS: Tombol Upload Design Files lama --- -->
+            <!-- <b-button ...>Upload Design Files</b-button> -->
+            <!-- --- AKHIR HAPUS --- -->
+
           </b-card>
         </b-col>
       </b-row>
@@ -434,8 +442,8 @@ export default {
     getStatusVariant(status) {
       const statusMap = {
         'pending': 'warning',
-        'paid': 'success',
-        'file_upload': 'info',
+        'paid': 'info', // Ubah warna untuk status 'paid' yang baru
+        'file_upload': 'success', // Warna untuk folder siap
         'processing': 'primary',
         'ready': 'success',
         'completed': 'success',
@@ -446,8 +454,8 @@ export default {
     formatStatus(status) {
        const statusLabels = {
         'pending': 'Pending Payment',
-        'paid': 'Payment Received',
-        'file_upload': 'Awaiting Files',
+        'paid': 'Payment Received (Preparing Folder)', // Label deskriptif baru
+        'file_upload': 'Folder Ready for Upload', // Label deskriptif baru
         'processing': 'In Production',
         'ready': 'Ready for Pickup',
         'completed': 'Completed',

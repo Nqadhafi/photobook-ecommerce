@@ -28,6 +28,8 @@ class PhotobookOrder extends Model
         'picked_up_at',
         'completed_at',
         'cancelled_at',
+        'google_drive_folder_url',
+        'google_drive_folder_id',
         'notes',
     ];
 

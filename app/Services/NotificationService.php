@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\PhotobookOrder;
 use App\Models\PhotobookNotification;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class NotificationService
@@ -65,5 +66,40 @@ class NotificationService
         }
     }
 
+  public function sendWhatsAppMessage(string $phoneNumber, string $message): bool
+{
+    $whatsappApiUrl = env('WHATSAPP_API_URL');
+    $whatsappApiToken = env('WHATSAPP_API_TOKEN');
+
+    if (!$whatsappApiUrl || !$whatsappApiToken) {
+        Log::error("Fonnte API credentials are missing in .env");
+        return false;
+    }
+
+    try {
+        // --- Contoh penyesuaian untuk Fonnte (hipotetis, sesuaikan dengan dokumentasi sebenarnya) ---
+        $response = Http::withHeaders([
+            'Authorization' => $whatsappApiToken, // Sesuaikan header autentikasi
+        ])->post($whatsappApiUrl, [
+            'target' => $phoneNumber, // Sesuaikan nama field
+            'message' => $message,   // Sesuaikan nama field
+            // 'delay' => '2', // Contoh parameter tambahan Fonnte
+            // Tambahkan field lain sesuai dokumentasi Fonnte
+        ]);
+        // --- Akhir contoh penyesuaian ---
+
+        if ($response->successful()) {
+            Log::info("WhatsApp message sent successfully to {$phoneNumber} via Fonnte");
+            return true;
+        } else {
+            Log::error("Failed to send WhatsApp message via Fonnte to {$phoneNumber}. Status: " . $response->status() . ". Body: " . $response->body());
+            return false;
+        }
+
+    } catch (\Exception $e) {
+        Log::error("Exception occurred while sending WhatsApp message via Fonnte to {$phoneNumber}: " . $e->getMessage());
+        return false;
+    }
+}
     // Bisa tambahkan method notifyByEmail, notifyBySms, dll jika diperlukan
 }
