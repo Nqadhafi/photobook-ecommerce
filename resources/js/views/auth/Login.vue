@@ -1,4 +1,3 @@
-<!-- resources/js/views/auth/Login.vue -->
 <template>
   <auth-layout>
     <div class="login-form">
@@ -59,7 +58,7 @@
 </template>
 
 <script>
-import { mapActions } from 'vuex';
+import { mapActions, mapGetters } from 'vuex';
 
 export default {
   name: 'Login',
@@ -74,6 +73,9 @@ export default {
       errors: {}
     };
   },
+  computed: {
+    ...mapGetters('auth', ['user']) // Ambil user dari Vuex store
+  },
   methods: {
     ...mapActions('auth', ['login']),
     
@@ -83,13 +85,25 @@ export default {
       this.errors = {};
 
       try {
-        await this.login(this.form);
-        this.$router.push({ name: 'Dashboard' });
+        await this.login(this.form); // Action Vuex login + fetch user
+
         this.$store.dispatch('showNotification', {
           title: 'Success',
           message: 'Welcome back!',
           type: 'success'
         });
+
+        const redirect = this.$route.query.redirect;
+        const role = this.user?.role;
+
+        if (redirect) {
+          this.$router.push(redirect);
+        } else if (role === 'admin' || role === 'super_admin') {
+          this.$router.push({ name: 'AdminDashboard' });
+        } else {
+          this.$router.push({ name: 'Dashboard' });
+        }
+
       } catch (error) {
         if (error.errors) {
           this.errors = error.errors;

@@ -1,28 +1,51 @@
 import Vue from 'vue';
 import VueRouter from 'vue-router';
 import store from '../store';
+import AdminLayout from '../components/layouts/AdminLayout.vue';
 
 Vue.use(VueRouter);
 
 const routes = [
-{ 
-  path: '/', 
-  name: 'Home', 
-  component: () => import('../views/pages/Home.vue'),
-  meta: { requiresAuth: false } 
-},
-  { path: '/dashboard', name: 'Dashboard', component: () => import('../views/dashboard/Dashboard.vue'), meta: { requiresAuth: true } },
-  { path: '/login', name: 'Login', component: () => import('../views/auth/Login.vue'), meta: { guest: true, requiresAuth: false } },
-  { path: '/register', name: 'Register', component: () => import('../views/auth/Register.vue'), meta: { guest: true, requiresAuth: false } },
-  { path: '/profile', name: 'Profile', component: () => import('../views/auth/Profile.vue'), meta: { requiresAuth: true } },
-  { path: '/products', name: 'Products', component: () => import('../views/products/ProductList.vue'), meta: { requiresAuth: false } },
-  { path: '/products/:id', name: 'ProductDetail', component: () => import('../views/products/ProductDetail.vue'), meta: { requiresAuth: false } },
-  { path: '/cart', name: 'Cart', component: () => import('../views/cart/Cart.vue'), meta: { requiresAuth: true } },
-  { path: '/checkout', name: 'Checkout', component: () => import('../views/checkout/Checkout.vue'), meta: { requiresAuth: true } },
-  { path: '/orders', name: 'Orders', component: () => import('../views/orders/OrderList.vue'), meta: { requiresAuth: true } },
-  { path: '/orders/:id', name: 'OrderDetail', component: () => import('../views/orders/OrderDetail.vue'), meta: { requiresAuth: true } },
-  { path: '/orders/:id/upload', name: 'FileUpload', component: () => import('../views/upload/FileUpload.vue'), meta: { requiresAuth: true } },
-  { path: '/orders/:id/timeline', name: 'OrderTimeline', component: () => import('../views/orders/OrderTimeline.vue'), meta: { requiresAuth: true } },
+  // Public & Guest
+  { path: '/', name: 'Home', component: () => import('../views/pages/Home.vue') },
+  { path: '/login', name: 'Login', component: () => import('../views/auth/Login.vue'), meta: { guest: true } },
+  { path: '/register', name: 'Register', component: () => import('../views/auth/Register.vue'), meta: { guest: true } },
+
+  // Authenticated User (role: user)
+  { path: '/dashboard', name: 'Dashboard', component: () => import('../views/dashboard/Dashboard.vue'), meta: { requiresAuth: true, allowedRoles: ['user'] } },
+  { path: '/profile', name: 'Profile', component: () => import('../views/auth/Profile.vue'), meta: { requiresAuth: true, allowedRoles: ['user'] } },
+  { path: '/cart', name: 'Cart', component: () => import('../views/cart/Cart.vue'), meta: { requiresAuth: true, allowedRoles: ['user'] } },
+  { path: '/checkout', name: 'Checkout', component: () => import('../views/checkout/Checkout.vue'), meta: { requiresAuth: true, allowedRoles: ['user'] } },
+  { path: '/orders', name: 'Orders', component: () => import('../views/orders/OrderList.vue'), meta: { requiresAuth: true, allowedRoles: ['user'] } },
+  { path: '/orders/:id', name: 'OrderDetail', component: () => import('../views/orders/OrderDetail.vue'), meta: { requiresAuth: true, allowedRoles: ['user'] } },
+  { path: '/orders/:id/upload', name: 'FileUpload', component: () => import('../views/upload/FileUpload.vue'), meta: { requiresAuth: true, allowedRoles: ['user'] } },
+  { path: '/orders/:id/timeline', name: 'OrderTimeline', component: () => import('../views/orders/OrderTimeline.vue'), meta: { requiresAuth: true, allowedRoles: ['user'] } },
+
+  // Product detail bisa diakses semua
+  { path: '/products', name: 'Products', component: () => import('../views/products/ProductList.vue') },
+  { path: '/products/:id', name: 'ProductDetail', component: () => import('../views/products/ProductDetail.vue') },
+
+  // Admin Routes
+  {
+    path: '/admin',
+    component: AdminLayout,
+    meta: { requiresAuth: true, requiresRole: 'admin' },
+    children: [
+      {
+        path: '',
+        name: 'AdminDashboard',
+        component: () => import('../views/admin/Dashboard.vue')
+      },
+      {
+        path: 'logout',
+        name: 'AdminLogout',
+        component: () => import('../views/admin/AdminLogout.vue') // Tambahkan file ini jika belum ada
+      }
+      // Tambahkan child route admin lainnya di sini
+    ]
+  },
+
+  // 404 fallback (harus di akhir)
   { path: '*', name: 'NotFound', component: () => import('../views/pages/NotFound.vue') }
 ];
 
@@ -32,38 +55,61 @@ const router = new VueRouter({
   routes
 });
 
-// Navigation guard
+// --- Navigation Guards ---
 router.beforeEach(async (to, from, next) => {
-  const isAuthenticated = store.getters['auth/isAuthenticated'];
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
+  const guestOnly = to.matched.some(record => record.meta.guest);
+  const requiredRole = to.matched.find(record => record.meta.requiresRole)?.meta.requiresRole;
+  const allowedRoles = to.matched.find(record => record.meta.allowedRoles)?.meta.allowedRoles;
+
+  let isAuthenticated = store.getters['auth/isAuthenticated'];
   const userFetched = store.state.auth.userFetched;
 
-  // Tunggu user di-fetch jika belum
+  // Fetch user jika belum
   if (!userFetched) {
-    await store.dispatch('auth/fetchUser').catch(() => {
-      // Gagal = belum login, tidak masalah
-    });
-  }
-
-  const nowAuthenticated = store.getters['auth/isAuthenticated'];
-
-  // 1. Cek jika route butuh login
-  if (to.matched.some(record => record.meta.requiresAuth)) {
-    if (!nowAuthenticated) {
-      return next('/login');
+    try {
+      await store.dispatch('auth/fetchUser');
+      isAuthenticated = store.getters['auth/isAuthenticated'];
+    } catch (error) {
+      console.warn('Failed to fetch user:', error);
+      isAuthenticated = false;
     }
-    return next();
   }
 
-  // 2. Cek jika route hanya untuk guest (belum login)
-  if (to.matched.some(record => record.meta.guest)) {
-    if (nowAuthenticated) {
-      return next('/dashboard'); // 🚫 Sudah login? Jangan ke login/register
+  const userRole = store.getters['auth/user']?.role;
+
+  // --- Auth required ---
+  if (requiresAuth && !isAuthenticated) {
+    return next({ name: 'Login', query: { redirect: to.fullPath } });
+  }
+
+  // --- Guest only ---
+  if (guestOnly && isAuthenticated) {
+    if (userRole === 'admin' || userRole === 'super_admin') {
+      return next({ name: 'AdminDashboard' });
     }
-    return next();
+    return next({ name: 'Dashboard' });
   }
 
-  // 3. Izinkan akses
-  next();
+  // --- Role-based access ---
+  if (requiredRole) {
+    const roleAllowed =
+      (requiredRole === 'admin' && (userRole === 'admin' || userRole === 'super_admin')) ||
+      (requiredRole === 'super_admin' && userRole === 'super_admin');
+
+    if (!roleAllowed) {
+      console.warn(`Access denied to ${to.path}. Required role: ${requiredRole}, User role: ${userRole}`);
+      return next({ name: 'Dashboard' }); // atau halaman forbidden jika ada
+    }
+  }
+
+  // --- AllowedRoles check (user-only routes) ---
+  if (allowedRoles && !allowedRoles.includes(userRole)) {
+    console.warn(`Access denied to ${to.path}. Allowed roles: ${allowedRoles}, User role: ${userRole}`);
+    return next({ name: userRole === 'admin' || userRole === 'super_admin' ? 'AdminDashboard' : 'Dashboard' });
+  }
+
+  next(); // izinkan akses
 });
 
 export default router;
