@@ -1,4 +1,5 @@
-import api from './api';
+// resources/js/services/orderService.js
+import api from './api'; // Gunakan instance api yang sudah dikonfigurasi
 
 class OrderService {
   async checkout(orderData) {
@@ -10,10 +11,9 @@ class OrderService {
     }
   }
 
-    async cancelOrder(orderId) {
+  async cancelOrder(orderId) {
     try {
-      // Endpoint sesuai dengan yang didefinisikan di routes/api.php
-      const response = await api.post(`/orders/${orderId}/cancel`); 
+      const response = await api.post(`/orders/${orderId}/cancel`);
       return response.data;
     } catch (error) {
       throw error.response?.data || { error: 'Failed to cancel order' };
@@ -41,12 +41,12 @@ class OrderService {
   async uploadFiles(orderId, files) {
     try {
       const formData = new FormData();
-      
+
       files.forEach((fileData, index) => {
         formData.append(`files[${index}][order_item_id]`, fileData.order_item_id);
         formData.append(`files[${index}][file]`, fileData.file);
       });
-      
+
       const response = await api.post(`/orders/${orderId}/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -66,6 +66,63 @@ class OrderService {
       throw error.response?.data || { error: 'Failed to fetch order timeline' };
     }
   }
+
+  // --- Methods untuk Admin Side ---
+
+  // Mengambil daftar order untuk admin dashboard
+  async getAdminOrders(params = {}) {
+    try {
+      // Benar: /api/admin/orders (api instance punya baseURL '/api')
+      const response = await api.get('/admin/orders', { params });
+      return response.data;
+    } catch (error) {
+      console.error('OrderService.getAdminOrders failed:', error);
+      throw error.response?.data || { error: 'Failed to fetch admin orders' };
+    }
+  }
+
+  async getAdminOrder(id) {
+    try {
+      const response = await api.get(`/admin/orders/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`OrderService.getAdminOrder(${id}) failed:`, error);
+      throw error.response?.data || { error: 'Failed to fetch admin order details' };
+    }
+  }
+
+  async updateOrderStatus(orderId, statusData) {
+    try {
+      const response = await api.post(`/admin/orders/${orderId}/update-status`, statusData);
+      return response.data;
+    } catch (error) {
+      console.error(`OrderService.updateOrderStatus(${orderId}) failed:`, error);
+      throw error.response?.data || { error: 'Failed to update order status' };
+    }
+  }
+
+  async sendToDeskprint(orderId, deskprintData) {
+    try {
+      const response = await api.post(`/admin/orders/${orderId}/send-to-deskprint`, deskprintData);
+      return response.data;
+    } catch (error) {
+      console.error(`OrderService.sendToDeskprint(${orderId}) failed:`, error);
+      throw error.response?.data || { error: 'Failed to send order to deskprint' };
+    }
+  }
+
+  async getAdminDashboardStats() {
+    try {
+      const response = await api.get(`/admin/dashboard`);
+      return response.data;
+    } catch (error) {
+      console.error('OrderService.getAdminDashboardStats failed:', error);
+      throw error.response?.data || { error: 'Failed to fetch dashboard statistics' };
+    }
+  }
+
+  // Tambahkan method admin lainnya di sini jika diperlukan, misalnya:
+  // async getDeskprintsForDropdown() { ... }
 }
 
 export default new OrderService();

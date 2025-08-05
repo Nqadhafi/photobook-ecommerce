@@ -40,8 +40,34 @@ const routes = [
         path: 'logout',
         name: 'AdminLogout',
         component: () => import('../views/admin/AdminLogout.vue') // Tambahkan file ini jika belum ada
-      }
-      // Tambahkan child route admin lainnya di sini
+      },
+      {
+        path: 'orders',
+        name: 'AdminOrders',
+        component: () => import('../views/admin/orders/Index.vue')
+      },
+      {
+        path: 'orders/:id',
+        name: 'AdminOrderDetail', // <-- Nama ini digunakan di Index.vue dan Back button
+        component: () => import('../views/admin/orders/Show.vue'),
+        props: true
+      },
+      {
+    path: 'products',
+    name: 'AdminProducts', // <-- Untuk link di sidebar AdminLayout.vue
+    component: () => import('../views/admin/products/Index.vue')
+      },
+      {
+          path: 'products/create',
+          name: 'AdminProductCreate',
+          component: () => import('../views/admin/products/Create.vue')
+      },
+      {
+          path: 'products/:id/edit',
+          name: 'AdminProductEdit',
+          component: () => import('../views/admin/products/Edit.vue'),
+          props: true
+      },
     ]
   },
 
