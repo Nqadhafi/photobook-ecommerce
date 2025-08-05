@@ -16,6 +16,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
     ];
 
     protected $hidden = [
@@ -26,6 +27,21 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    public function isAdmin(): bool
+    {
+        return in_array($this->role, ['admin', 'super_admin']);
+    }
+
+        public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
+    }
+
+        public function hasRole(string $role): bool
+    {
+        return $this->role === $role;
+    }
 
     // Relasi
     public function photobookProfile()

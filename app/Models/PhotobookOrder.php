@@ -44,6 +44,18 @@ class PhotobookOrder extends Model
         'cancelled_at' => 'datetime',
     ];
 
+        public function coupons()
+    {
+        // Gantilah 'photobook_orders' dan 'order_id' jika nama tabel/kolom berbeda
+        return $this->belongsToMany(Coupon::class, 'coupon_order', 'order_id', 'coupon_id');
+    }
+
+    // Jika satu order hanya bisa pakai satu kupon, gunakan belongsTo dan tambah kolom coupon_id di tabel photobook_orders
+    // public function coupon()
+    // {
+    //     return $this->belongsTo(Coupon::class);
+    // }
+
     // Relasi
     public function user()
     {

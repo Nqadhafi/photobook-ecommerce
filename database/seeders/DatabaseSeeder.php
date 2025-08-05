@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             PhotobookCustomerProfilesTableSeeder::class,
             PhotobookProductsTableSeeder::class,
             PhotobookTemplatesTableSeeder::class,
+            SuperAdminUserSeeder::class,
         ]);
     }
 }

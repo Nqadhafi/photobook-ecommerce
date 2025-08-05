@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB; // Untuk transaction
+use App\Models\Coupon;
+
 
 class PhotobookOrderController extends Controller
 {
@@ -36,83 +38,199 @@ class PhotobookOrderController extends Controller
     {
         $user = $request->user();
 
-        // 1. Ambil item cart user
+        // --- 1. Validasi input termasuk kode kupon ---
+        $validator = Validator::make($request->all(), [
+            'coupon_code' => ['nullable', 'string', 'exists:coupons,code'], // Validasi dasar kode kupon
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $couponCode = $request->input('coupon_code');
+        $coupon = null;
+
+        // --- 2. Temukan dan validasi kupon jika kode diberikan ---
+        if ($couponCode) {
+            // Coba temukan kupon yang aktif dan valid
+            $coupon = Coupon::active()->valid()->where('code', $couponCode)->first();
+
+            if (!$coupon) {
+                return response()->json(['error' => 'Invalid, expired, or inactive coupon code.'], 400);
+            }
+
+            // Gunakan method isUsable dari model Coupon untuk pengecekan akhir
+            // Ini mencakup cek aktif, tanggal, dan batas penggunaan total
+            if (!$coupon->isUsable()) {
+                return response()->json(['error' => 'This coupon is no longer available or has reached its usage limit.'], 400);
+            }
+
+            // --- Validasi tambahan: Cek penggunaan per user jika diperlukan ---
+            // Misalnya, jika Anda memiliki relasi atau tabel untuk melacak penggunaan per user:
+            /*
+            if ($coupon->max_uses_per_user > 0) {
+                // Asumsi: ada relasi 'orders' di model User yang mengarah ke PhotobookOrder
+                // dan relasi 'coupons' di PhotobookOrder (many-to-many)
+                $userCouponUsageCount = $user->orders()->whereHas('coupons', function($query) use ($coupon) {
+                    $query->where('coupon_id', $coupon->id);
+                })->count();
+
+                if ($userCouponUsageCount >= $coupon->max_uses_per_user) {
+                    return response()->json(['error' => 'You have reached the maximum usage limit for this coupon.'], 400);
+                }
+            }
+            */
+            // --- Akhir Validasi per user ---
+        }
+        // --- Akhir Validasi Kupon ---
+
+        // --- 3. Ambil item cart user ---
         $cartItems = $user->photobookCarts()->with(['product', 'template'])->get();
 
-        // 2. Validasi cart tidak kosong
+        // --- 4. Validasi cart tidak kosong ---
         if ($cartItems->isEmpty()) {
             return response()->json(['error' => 'Your cart is empty'], 400);
         }
 
-        // 3. Validasi profil customer ada (opsional untuk versi awal)
+        // --- 5. Validasi profil customer ada (opsional untuk versi awal) ---
         // Kita asumsikan sudah ada dari test setup
+        // Tambahkan pengecekan keberadaan profil jika diperlukan:
+        /*
+        if (!$user->photobookProfile) {
+             return response()->json(['error' => 'Customer profile information is missing. Please update your profile.'], 400);
+        }
+        */
 
-        // 4. Hitung total
-        $totalAmount = 0;
+        // --- 6. Hitung subtotal ---
+        $subTotalAmount = 0;
+        $hasInvalidItem = false; // Flag untuk item yang tidak valid
         foreach ($cartItems as $item) {
-            // Validasi tambahan: pastikan produk dan template aktif
-            // ... (sama seperti sebelumnya)
-            $totalAmount += $item->quantity * $item->product->price;
+            // Validasi tambahan: pastikan produk dan template ada dan aktif jika diperlukan
+            // Contoh sederhana: cek apakah relasi dimuat dan memiliki harga
+            if (!$item->product || !isset($item->product->price)) {
+                Log::warning('Invalid product in cart for user ID: ' . $user->id, ['cart_item_id' => $item->id]);
+                $hasInvalidItem = true;
+                // Anda bisa memilih untuk return error atau skip item ini
+                // Untuk sekarang, kita akhiri proses
+                return response()->json(['error' => 'One or more items in your cart are invalid. Please review your cart.'], 400);
+            }
+            // Bisa juga mengecek $item->template jika diperlukan
+            $subTotalAmount += $item->quantity * $item->product->price;
         }
 
-        // 5. Buat order dalam transaction database
+        // --- 7. Hitung diskon ---
+        $discountAmount = 0;
+        if ($coupon) {
+            // Hitung diskon berdasarkan persentase
+            // Pastikan discount_percent tidak null
+            if ($coupon->discount_percent !== null) {
+                $discountAmount = ($coupon->discount_percent / 100) * $subTotalAmount;
+            }
+            // Jika menggunakan diskon nominal, ganti blok di atas dengan:
+            // if ($coupon->discount_amount !== null) {
+            //     $discountAmount = min($coupon->discount_amount, $subTotalAmount); // Diskon tidak boleh melebihi subtotal
+            // }
+        }
+
+        // --- 8. Hitung total akhir ---
+        $totalAmount = max($subTotalAmount - $discountAmount, 0); // Total tidak boleh negatif
+
+        // --- 9. Buat order dalam transaction database ---
         try {
-            return DB::transaction(function () use ($user, $cartItems, $totalAmount) {
-                // Generate order number unik
+            return DB::transaction(function () use ($user, $cartItems, $subTotalAmount, $discountAmount, $totalAmount, $coupon) {
+                // --- Generate order number unik ---
                 $orderNumber = 'PB' . strtoupper(uniqid());
 
-                // Buat order
-                $order = \App\Models\PhotobookOrder::create([
+                // --- Buat order dengan informasi kupon dan diskon ---
+                // Pastikan kolom 'sub_total_amount' dan 'discount_amount' ada di tabel photobook_orders
+                $orderData = [
                     'user_id' => $user->id,
                     'order_number' => $orderNumber,
-                    'total_amount' => $totalAmount,
+                    'sub_total_amount' => $subTotalAmount, // Kolom baru
+                    'discount_amount' => $discountAmount,  // Kolom baru
+                    'total_amount' => $totalAmount, // Total yang sudah dikurangi diskon
                     'status' => 'pending',
-                    'customer_name' => $user->name,
-                    'customer_email' => $user->email,
+                    'customer_name' => $user->name ?? '', // Tambahkan penanganan null jika diperlukan
+                    'customer_email' => $user->email ?? '',
                     'customer_phone' => $user->photobookProfile->phone_number ?? '',
                     'customer_address' => $user->photobookProfile->address ?? '',
                     'customer_city' => $user->photobookProfile->city ?? '',
                     'customer_postal_code' => $user->photobookProfile->postal_code ?? '',
                     'pickup_code' => strtoupper(substr(md5(uniqid()), 0, 6)),
-                ]);
+                ];
 
-                // Buat order items
+                // Jika Anda menyimpan ID kupon di tabel orders (misalnya, kolom coupon_id):
+                // if ($coupon) {
+                //     $orderData['coupon_id'] = $coupon->id;
+                // }
+
+                $order = \App\Models\PhotobookOrder::create($orderData);
+
+                // Periksa apakah order berhasil dibuat
+                if (!$order) {
+                     throw new \Exception('Failed to create order record.');
+                }
+                // --- Akhir Buat Order ---
+
+                // --- Buat order items ---
                 foreach ($cartItems as $item) {
-                    $order->items()->create([
+                    // Validasi kembali sebelum membuat item order
+                    if (!$item->product_id || !$item->template_id) {
+                        Log::error('Missing product_id or template_id in cart item for order creation.', ['cart_item_id' => $item->id, 'order_id' => $order->id]);
+                        throw new \Exception('Invalid item data in cart.');
+                    }
+
+                    $orderItem = $order->items()->create([
                         'product_id' => $item->product_id,
                         'template_id' => $item->template_id,
                         'quantity' => $item->quantity,
-                        'price' => $item->product->price,
+                        'price' => $item->product->price, // Harga pada saat order dibuat
                         'design_same' => $item->design_same,
                     ]);
-                }
 
-                // Kosongkan cart
-                $user->photobookCarts()->delete();
+                    if (!$orderItem) {
+                         Log::error('Failed to create order item.', ['cart_item_id' => $item->id, 'order_id' => $order->id]);
+                         throw new \Exception('Failed to create order items.');
+                    }
+                }
+                // --- Akhir Buat Order Items ---
+
+                // --- Kosongkan cart ---
+                $deletedCartCount = $user->photobookCarts()->delete();
+                
+                // Tidak perlu dicek secara ketat, karena cart kosong juga tidak masalah
+                // --- Akhir Kosongkan Cart ---
+
+                // --- Kirim notifikasi ---
+                $notificationMessage = "Your order #{$order->order_number} has been created. Please proceed with the payment.";
+                if ($coupon && $discountAmount > 0) {
+                    $notificationMessage .= " Coupon '{$coupon->code}' applied for a discount of Rp " . number_format($discountAmount, 0, ',', '.') . ".";
+                }
                 $this->notificationService->notifyCustomer(
                     $user,
                     'Order Created',
-                    "Your order #{$order->order_number} has been created. Please proceed with the payment.",
+                    $notificationMessage,
                     $order
-                    // Tidak ada action URL khusus untuk pembayaran, karena Snap token dikirim di response
                 );
-                // 6. Integrasi Midtrans: Buat transaksi
+                // --- Akhir Notifikasi ---
+
+                // --- Integrasi Midtrans: Buat transaksi ---
+                // Gunakan $totalAmount yang sudah dikurangi diskon
                 $midtransResponse = $this->midtransService->createTransaction($order);
 
                 if ($midtransResponse['status'] === 'error') {
                     // Log error
-                    Log::error('Midtrans Transaction Error: ' . $midtransResponse['message']);
+                    Log::error('Midtrans Transaction Error: ' . $midtransResponse['message'], ['order_id' => $order->id]);
                     // Bisa rollback transaction atau tetap buat order dan beri instruksi manual
-                    // Untuk sekarang, kita return error
-                    return response()->json(['error' => 'Failed to initiate payment. Please try again.'], 500);
+                    // Untuk sekarang, kita lempar exception agar transaction di-rollback
+                    throw new \Exception('Failed to initiate payment with Midtrans: ' . $midtransResponse['message']);
                 }
+                // --- Akhir Integrasi Midtrans ---
 
-                // 7. Simpan detail pembayaran ke tabel photobook_midtrans_payments
-                PhotobookMidtransPayment::create([
+                // --- Simpan detail pembayaran ke tabel photobook_midtrans_payments ---
+                $paymentRecord = PhotobookMidtransPayment::create([
                     'order_id' => $order->id,
                     'snap_token' => $midtransResponse['snap_token'],
-                    // redirect_url bisa dibentuk di frontend dari snap_token
-                    // atau bisa disimpan jika menggunakan vtweb
                     'redirect_url' => '', // Isi jika menggunakan vtweb, atau biarkan kosong
                     'customer_name' => $order->customer_name,
                     'customer_email' => $order->customer_email,
@@ -122,20 +240,85 @@ class PhotobookOrderController extends Controller
                     // Field lain akan diisi saat notifikasi diterima
                 ]);
 
-                // Load items untuk response
-                $order->load('items');
+                 if (!$paymentRecord) {
+                     Log::error('Failed to create Midtrans payment record.', ['order_id' => $order->id]);
+                     throw new \Exception('Failed to record payment details.');
+                 }
+                // --- Akhir Simpan Pembayaran ---
 
-                // 8. Kembalikan response dengan snap_token
-                return response()->json([
+                // --- (Opsional) Tautkan kupon ke order (jika menggunakan relasi many-to-many) ---
+                if ($coupon) {
+                    try {
+                        // Tautkan kupon ke order menggunakan relasi many-to-many
+                        $order->coupons()->attach($coupon->id); // Menggunakan relasi coupons()
+
+                        // Naikkan jumlah penggunaan kupon secara aman
+                        // Menggunakan update agar aman dari race condition
+                        DB::table('coupons')
+                            ->where('id', $coupon->id)
+                            ->increment('times_used');
+
+                        // (Opsional) Catat penggunaan per user jika diperlukan dan menggunakan tabel terpisah
+                        // DB::table('coupon_user')->insert([
+                        //     'coupon_id' => $coupon->id,
+                        //     'user_id' => $user->id,
+                        //     'order_id' => $order->id,
+                        //     'created_at' => now(),
+                        //     'updated_at' => now(),
+                        // ]);
+
+                    } catch (\Exception $e) {
+                        // Jika gagal menautkan kupon, log error tetapi jangan batalkan order
+                        // Karena pembayaran sudah diinisiasi
+                        Log::warning('Failed to link coupon to order or increment usage.', [
+                            'order_id' => $order->id,
+                            'coupon_id' => $coupon->id,
+                            'error' => $e->getMessage()
+                        ]);
+                        // Bisa memilih untuk melempar exception jika ini kritis
+                        // throw new \Exception('Failed to apply coupon to order.');
+                    }
+                }
+                // --- Akhir Tautan Kupon ---
+
+                // --- Load items untuk response ---
+                $order->load('items'); // Eager load items
+                // --- Akhir Load Items ---
+
+                // --- 10. Kembalikan response dengan snap_token dan info kupon ---
+                $responseData = [
                     'order' => $order,
                     'snap_token' => $midtransResponse['snap_token'],
                     // 'redirect_url' => $midtransResponse['redirect_url'] ?? null, // Jika pakai vtweb
-                ], 201);
+                ];
+
+                // Sertakan info kupon yang diterapkan jika ada
+                if ($coupon) {
+                    $responseData['coupon_applied'] = [
+                        'code' => $coupon->code,
+                        'discount_percent' => $coupon->discount_percent, // Atau discount_amount jika digunakan
+                        'discount_value' => $discountAmount,
+                    ];
+                }
+
+                return response()->json($responseData, 201);
+                // --- Akhir Response ---
             });
         } catch (\Exception $e) {
             // DB::rollBack(); // Tidak perlu karena sudah pakai DB::transaction closure
-            Log::error('Checkout Exception: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to process checkout. Please try again.'], 500);
+            Log::error('Checkout Exception: ' . $e->getMessage(), [
+                'user_id' => $user->id ?? null,
+                'coupon_code' => $couponCode ?? null,
+                'exception' => $e
+            ]);
+            // Periksa jenis exception untuk memberikan pesan yang lebih spesifik
+            if (strpos($e->getMessage(), 'Midtrans') !== false) {
+                return response()->json(['error' => 'Failed to initiate payment. Please try again.'], 500);
+            } elseif (strpos($e->getMessage(), 'order record') !== false || strpos($e->getMessage(), 'order items') !== false) {
+                 return response()->json(['error' => 'Failed to create order. Please try again.'], 500);
+            } else {
+                return response()->json(['error' => 'Failed to process checkout. Please try again.'], 500);
+            }
         }
     }
 

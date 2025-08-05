@@ -10,6 +10,12 @@ use App\Http\Controllers\OrderHistoryController;
 use App\Http\Controllers\PhotobookCartController;
 use App\Http\Controllers\PhotobookOrderController;
 use App\Http\Controllers\MidtransWebhookController;
+use App\Http\Controllers\Admin\AdminOrderController;
+use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Admin\AdminProductController;
+use App\Http\Controllers\Admin\AdminTemplateController;
+use App\Http\Controllers\Admin\AdminCouponController;
+use App\Http\Controllers\Admin\AdminDeskprintController;
 
 
 /*
@@ -36,6 +42,26 @@ Route::get('/templates/{template}', [TemplateController::class, 'show']);
 // Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //     return $request->user();
 // });
+
+// --- Route API Admin ---
+Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () { // Middleware auth:sanctum diterapkan ke seluruh grup
+    // Routes untuk Admin dan Super Admin
+    Route::get('/dashboard', [AdminOrderController::class, 'dashboard']); // Contoh endpoint dashboard
+    Route::apiResource('orders', AdminOrderController::class); // GET /api/admin/orders, GET /api/admin/orders/{order}, dll.
+    // Tambahkan endpoint khusus untuk order jika diperlukan
+    Route::post('/orders/{order}/update-status', [AdminOrderController::class, 'updateStatus']); // Atau gunakan PATCH pada resource
+    Route::post('/orders/{order}/send-to-deskprint', [AdminOrderController::class, 'sendToDeskprint']);
+    // Tambahkan endpoint untuk melihat file di GDrive jika diperlukan (kompleks, mungkin lebih baik di frontend dengan link langsung)
+    
+    // Routes khusus Super Admin
+    Route::middleware(['role:super_admin'])->group(function () {
+        Route::apiResource('users', AdminUserController::class); // Hanya Super Admin
+        Route::apiResource('products', AdminProductController::class); // Hanya Super Admin
+        Route::apiResource('templates', AdminTemplateController::class); // Hanya Super Admin
+        Route::apiResource('coupons', AdminCouponController::class); // Hanya Super Admin
+        Route::apiResource('deskprints', AdminDeskprintController::class); // Hanya Super Admin
+    });
+});
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);

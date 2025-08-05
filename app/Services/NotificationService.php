@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\PhotobookOrder;
 use App\Models\PhotobookNotification;
+use App\Models\Deskprint;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -101,5 +102,60 @@ class NotificationService
         return false;
     }
 }
+
+    public function sendOrderToDeskprint(Deskprint $deskprint, string $orderDetailsMessage): bool
+    {
+        // Validasi input dasar
+        if (!$deskprint || empty($deskprint->contact_number) || empty($orderDetailsMessage)) {
+            Log::warning("Invalid data provided to sendOrderToDeskprint.", [
+                'deskprint_id' => $deskprint->id ?? null,
+                'contact_number' => $deskprint->contact_number ?? null,
+                'message_empty' => empty($orderDetailsMessage)
+            ]);
+            return false;
+        }
+
+        $phoneNumber = $deskprint->contact_number;
+        $whatsappApiUrl = env('WHATSAPP_API_URL'); // Pastikan ini di .env
+        $whatsappApiToken = env('WHATSAPP_API_TOKEN'); // Pastikan ini di .env
+
+        if (!$whatsappApiUrl || !$whatsappApiToken) {
+            Log::error("WhatsApp API credentials (URL or Token) are missing in .env for sending to deskprint.");
+            return false;
+        }
+
+        try {
+            // --- Contoh request untuk API umum (sesuaikan dengan dokumentasi API Anda) ---
+            // Misalnya, API mengharapkan JSON body dan token di header:
+            $response = Http::withToken($whatsappApiToken) // Jika token dikirim via header
+                ->timeout(30) // Tambahkan timeout untuk keamanan
+                ->post($whatsappApiUrl, [
+                    'to' => $phoneNumber,
+                    'body' => $orderDetailsMessage,
+                    // 'type' => 'text', // Jika diperlukan
+                    // Field lain sesuai API
+                ]);
+
+            // Atau, jika token dikirim sebagai parameter query:
+            // $response = Http::timeout(30)->post("{$whatsappApiUrl}?token={$whatsappApiToken}", [
+            //     'phone' => $phoneNumber,
+            //     'message' => $orderDetailsMessage,
+            // ]);
+
+            if ($response->successful()) {
+                Log::info("WhatsApp message sent successfully to deskprint {$deskprint->name} ({$phoneNumber}).");
+                return true;
+            } else {
+                Log::error("Failed to send WhatsApp message to deskprint {$deskprint->name} ({$phoneNumber}). Status: " . $response->status() . ". Body: " . $response->body());
+                return false;
+            }
+
+        } catch (\Exception $e) {
+            Log::error("Exception occurred while sending WhatsApp message to deskprint {$deskprint->name} ({$phoneNumber}): " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return false;
+        }
+    }
     // Bisa tambahkan method notifyByEmail, notifyBySms, dll jika diperlukan
 }
