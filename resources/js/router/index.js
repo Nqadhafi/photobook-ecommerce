@@ -84,6 +84,22 @@ const routes = [
         component: () => import('../views/admin/users/Edit.vue'),
         props: true
       },
+      {
+        path: 'templates',
+        name: 'AdminTemplates',
+        component: () => import('../views/admin/templates/Index.vue')
+      },
+      {
+        path: 'templates/create',
+        name: 'AdminTemplateCreate',
+        component: () => import('../views/admin/templates/Create.vue')
+      },
+      {
+        path: 'templates/:id/edit',
+        name: 'AdminTemplateEdit',
+        component: () => import('../views/admin/templates/Edit.vue'),
+        props: true
+      },
       
     ]
   },

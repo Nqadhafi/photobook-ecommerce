@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Models\PhotobookTemplate; // Sesuaikan dengan nama model template Anda
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage; // Untuk mengelola file upload
 use Illuminate\Validation\Rule;
 
 class AdminTemplateController extends Controller
@@ -20,13 +21,11 @@ class AdminTemplateController extends Controller
     {
         $validated = $request->validate([
             'per_page' => 'nullable|integer|min:1|max:100',
-            'search' => 'nullable|string|max:255', // Untuk pencarian berdasarkan nama
-            // Bisa menambahkan filter lain seperti berdasarkan layout_type jika ada
+            'search' => 'nullable|string|max:255',
         ]);
 
-        $query = PhotobookTemplate::query();
+        $query = PhotobookTemplate::with('product'); // ⚡ load relasi product
 
-        // Filter berdasarkan pencarian nama
         if (!empty($validated['search'])) {
             $query->where('name', 'like', '%' . $validated['search'] . '%');
         }
@@ -36,6 +35,7 @@ class AdminTemplateController extends Controller
 
         return response()->json($templates);
     }
+
 
     /**
      * Store a newly created resource in storage.
@@ -48,7 +48,12 @@ class AdminTemplateController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:photobook_templates,name', // Sesuaikan nama tabel
-            'description' => 'nullable|string',
+            'product_id' => [
+                'required',
+                'integer',
+                Rule::exists('photobook_products', 'id'), // Pastikan produk ada
+            ],
+            'sample_image' => 'nullable|image|max:2048', // Maksimal 2MB, sesuaikan jika perlu
             // Validasi untuk layout_data sebagai JSON string atau array
             // Jika sebagai string JSON:
             // 'layout_data' => 'required|json',
@@ -58,6 +63,7 @@ class AdminTemplateController extends Controller
             'layout_data.dimensions' => 'required|string|max:50',
             'layout_data.layout_type' => 'required|string|max:100',
             'layout_data.photo_slots' => 'required|integer|min:0',
+            
             // Tambahkan validasi untuk field lain dalam layout_data jika diperlukan
             // Tambahkan validasi untuk field lain jika ada
         ]);
@@ -67,7 +73,10 @@ class AdminTemplateController extends Controller
             // Model Eloquent biasanya secara otomatis meng-handle ini jika $casts sudah diatur
             // di model. Tapi untuk keamanan, kita bisa encode:
             // $validated['layout_data'] = json_encode($validated['layout_data']);
-
+            //upload sample_image jika ada
+            if ($request->hasFile('sample_image')) {
+                $validated['sample_image'] = $request->file('sample_image')->store('templates', 'public'); // Simpan di storage/app/public/templates
+            }
             $template = PhotobookTemplate::create($validated);
 
             return response()->json($template, 201);
@@ -96,32 +105,44 @@ class AdminTemplateController extends Controller
      * @param  \App\Models\PhotobookTemplate  $template
      * @return \Illuminate\Http\JsonResponse
      */
-    public function update(Request $request, PhotobookTemplate $template): JsonResponse
-    {
-        $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:255|unique:photobook_templates,name,' . $template->id, // Abaikan ID ini
-            'description' => 'nullable|string',
-            // Validasi layout_data untuk update
-            'layout_data' => 'sometimes|required|array',
-            'layout_data.pages' => 'sometimes|required|integer|min:1',
-            'layout_data.dimensions' => 'sometimes|required|string|max:50',
-            'layout_data.layout_type' => 'sometimes|required|string|max:100',
-            'layout_data.photo_slots' => 'sometimes|required|integer|min:0',
-            // Tambahkan validasi untuk field lain jika ada
+public function update(Request $request, PhotobookTemplate $template): JsonResponse
+{
+    $validated = $request->validate([
+        'name' => 'sometimes|required|string|max:255|unique:photobook_templates,name,' . $template->id,
+        'sample_image' => 'nullable|image|max:2048',
+        'layout_data' => 'sometimes|required|array',
+        'layout_data.pages' => 'sometimes|required|integer|min:1',
+        'layout_data.dimensions' => 'sometimes|required|string|max:50',
+        'layout_data.layout_type' => 'sometimes|required|string|max:100',
+        'layout_data.photo_slots' => 'sometimes|required|integer|min:0',
+    ]);
+
+    try {
+        // Upload sample_image jika ada
+        if ($request->hasFile('sample_image')) {
+            // Hapus file lama jika ada
+            if ($template->sample_image && Storage::disk('public')->exists($template->sample_image)) {
+                Storage::disk('public')->delete($template->sample_image);
+            }
+
+            // Simpan file baru
+            $validated['sample_image'] = $request->file('sample_image')->store('templates', 'public'); 
+            // hasil: templates/nama_file.jpg
+        }
+
+        // Update template
+        $template->update($validated);
+
+        return response()->json($template);
+    } catch (\Exception $e) {
+        Log::error('Failed to update template ID ' . $template->id . ': ' . $e->getMessage(), [
+            'validated_data' => array_merge($validated, ['layout_data' => json_encode($validated['layout_data'] ?? null)])
         ]);
 
-        try {
-            // Logika encoding layout_data jika diperlukan (lihat catatan di store)
-            // $validated['layout_data'] = json_encode($validated['layout_data']);
-
-            $template->update($validated);
-
-            return response()->json($template);
-        } catch (\Exception $e) {
-            Log::error('Failed to update template ID ' . $template->id . ': ' . $e->getMessage(), ['validated_data' => array_merge($validated, ['layout_data' => json_encode($validated['layout_data'] ?? null)])]);
-            return response()->json(['error' => 'Failed to update template. Please try again.'], 500);
-        }
+        return response()->json(['error' => 'Failed to update template. Please try again.'], 500);
     }
+}
+
 
     /**
      * Remove the specified resource from storage.
@@ -138,10 +159,10 @@ class AdminTemplateController extends Controller
             // Misalnya, cek relasi dengan PhotobookOrderItem atau PhotobookProduct
             // Anda perlu menyesuaikan nama relasi berdasarkan model Anda.
             // Contoh jika ada relasi 'items' di model PhotobookTemplate:
-            // $isInUse = $template->items()->exists();
-            // if ($isInUse) {
-            //     return response()->json(['error' => 'Cannot delete template because it is associated with orders or products.'], 400);
-            // }
+            $isInUse = $template->items()->exists();
+            if ($isInUse) {
+                return response()->json(['error' => 'Cannot delete template because it is associated with orders or products.'], 400);
+            }
 
             $template->delete();
 
