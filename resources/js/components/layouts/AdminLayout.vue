@@ -45,7 +45,7 @@
               <b-nav-item v-if="isSuperAdmin" class="mt-4">
                 <strong><b-icon icon="gear" class="mr-2"></b-icon>Management</strong>
               </b-nav-item>
-              <b-nav-item v-if="isSuperAdmin" :to="{ name: 'AdminUsers' }" active-class="active">
+              <b-nav-item v-if="isSuperAdmin" :to="{ name: 'AdminUserIndex' }" active-class="active">
                 <b-icon icon="people" class="mr-2"></b-icon>Admin Users
               </b-nav-item>
               <b-nav-item v-if="isSuperAdmin" :to="{ name: 'AdminProducts' }" active-class="active">

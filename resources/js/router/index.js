@@ -68,6 +68,23 @@ const routes = [
           component: () => import('../views/admin/products/Edit.vue'),
           props: true
       },
+      {
+        path: 'users',
+        name: 'AdminUserIndex',
+        component: () => import('../views/admin/users/Index.vue')
+      },
+      {
+        path: 'users/create',
+        name: 'AdminUserCreate',
+        component: () => import('../views/admin/users/Create.vue')
+      },
+      {
+        path: 'users/:id/edit',
+        name: 'AdminUserEdit',
+        component: () => import('../views/admin/users/Edit.vue'),
+        props: true
+      },
+      
     ]
   },
 

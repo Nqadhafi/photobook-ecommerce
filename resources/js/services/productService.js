@@ -68,7 +68,7 @@ class ProductService {
   async updateAdminProduct(id, productData) {
     try {
       // Bisa juga menggunakan api.put jika backend mendukung
-      const response = await api.post(`/admin/products/${id}`, productData);
+      const response = await api.put(`/admin/products/${id}`, productData);
       return response.data;
     } catch (error) {
       console.error(`ProductService.updateAdminProduct(${id}) failed:`, error);
