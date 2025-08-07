@@ -100,6 +100,22 @@ const routes = [
         component: () => import('../views/admin/templates/Edit.vue'),
         props: true
       },
+      {
+    path: 'deskprints',
+    name: 'AdminDeskprints', // <-- Untuk link di sidebar AdminLayout.vue
+    component: () => import('../views/admin/deskprints/Index.vue')
+      },
+      {
+          path: 'deskprints/create',
+          name: 'AdminDeskprintCreate',
+          component: () => import('../views/admin/deskprints/Create.vue')
+      },
+      {
+          path: 'deskprints/:id/edit',
+          name: 'AdminDeskprintEdit',
+          component: () => import('../views/admin/deskprints/Edit.vue'),
+          props: true
+      },
       
     ]
   },

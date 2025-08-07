@@ -84,7 +84,7 @@ class NotificationService
         ])->post($whatsappApiUrl, [
             'target' => $phoneNumber, // Sesuaikan nama field
             'message' => $message,   // Sesuaikan nama field
-            // 'delay' => '2', // Contoh parameter tambahan Fonnte
+            'delay' => '10', 
             // Tambahkan field lain sesuai dokumentasi Fonnte
         ]);
         // --- Akhir contoh penyesuaian ---
@@ -125,16 +125,14 @@ class NotificationService
         }
 
         try {
-            // --- Contoh request untuk API umum (sesuaikan dengan dokumentasi API Anda) ---
-            // Misalnya, API mengharapkan JSON body dan token di header:
-            $response = Http::withToken($whatsappApiToken) // Jika token dikirim via header
-                ->timeout(30) // Tambahkan timeout untuk keamanan
-                ->post($whatsappApiUrl, [
-                    'to' => $phoneNumber,
-                    'body' => $orderDetailsMessage,
-                    // 'type' => 'text', // Jika diperlukan
-                    // Field lain sesuai API
-                ]);
+        $response = Http::withHeaders([
+            'Authorization' => $whatsappApiToken, // Sesuaikan header autentikasi
+        ])->post($whatsappApiUrl, [
+            'target' => $phoneNumber, // Sesuaikan nama field
+            'message' => $orderDetailsMessage,   // Sesuaikan nama field
+            'delay' => '10',
+            // Tambahkan field lain sesuai dokumentasi Fonnte
+        ]);
 
             // Atau, jika token dikirim sebagai parameter query:
             // $response = Http::timeout(30)->post("{$whatsappApiUrl}?token={$whatsappApiToken}", [

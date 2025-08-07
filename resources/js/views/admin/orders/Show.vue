@@ -167,9 +167,7 @@
 
 <script>
 import orderService from '../../../services/orderService';
-import deskprintService from '../../../services/deskprintService'; // Jika nanti ada service untuk mengambil daftar deskprint
-// Jika nanti ada service untuk mengambil daftar deskprint
-// import deskprintService from '@/services/deskprintService';
+import deskprintService from '../../../services/deskprintService';
 
 export default {
   name: 'AdminOrderShow',
@@ -210,7 +208,7 @@ export default {
   },
   created() {
     this.fetchOrder();
-    // this.fetchDeskprints(); // Jika menggunakan service terpisah untuk deskprint
+    this.fetchDeskprints(); 
   },
   methods: {
     async fetchOrder() {
@@ -233,9 +231,10 @@ export default {
 
     async fetchDeskprints() {
       try {
-        // Ambil hanya deskprint yang aktif
-        const deskprints = await deskprintService.getActiveDeskprints();
+        // Gunakan method khusus yang memastikan parameter benar
+        const deskprints = await deskprintService.getActiveDeskprintsForDropdown();
         this.deskprintOptions = deskprints;
+        console.log('Deskprint options for dropdown loaded:', this.deskprintOptions);
       } catch (error) {
         console.error('Failed to fetch deskprints for dropdown:', error);
         // Tampilkan pesan peringatan ringan karena ini tidak menghentikan seluruh halaman
@@ -244,9 +243,7 @@ export default {
           variant: 'warning',
           solid: true
         });
-        // Atau, bisa juga mereset ke array kosong
-        // this.deskprintOptions = [];
-      }
+    }
     },
 
     async updateStatus() {
