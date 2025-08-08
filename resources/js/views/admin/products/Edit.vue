@@ -204,9 +204,9 @@ export default {
         if (this.form.thumbnail) {
             formData.append('thumbnail', this.form.thumbnail);
         }
-        formData.append('is_active', this.form.is_active);
-        // Laravel perlu tahu ini adalah request update, biasanya dengan method spoofing
+        formData.append('is_active', this.form.is_active ? 1 : 0);
         formData.append('_method', 'PUT'); // Atau gunakan axios.put() jika backend mendukung
+        // Laravel perlu tahu ini adalah request update, biasanya dengan method spoofing
 
         const response = await productService.updateAdminProduct(this.id, formData);
 

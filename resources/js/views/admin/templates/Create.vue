@@ -243,8 +243,7 @@ export default {
         formData.append('layout_data[photo_slots]', this.form.layout_data.photo_slots);
         // Cara 2: Append sebagai JSON string (perlu decoding di backend)
         // formData.append('layout_data', JSON.stringify(this.form.layout_data));
-        
-        formData.append('is_active', this.form.is_active);
+        formData.append('is_active', this.form.is_active ? 1 : 0);
 
         const response = await templateService.createAdminTemplate(formData);
 

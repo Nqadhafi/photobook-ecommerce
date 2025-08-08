@@ -94,6 +94,7 @@ class AdminProductController extends Controller
      */
     public function update(Request $request, PhotobookProduct $product): JsonResponse
     {
+        Log::info('Update Product Request Data:', ['request_data' => $request->all()]);
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255|unique:photobook_products,name,' . $product->id,
             'description' => 'nullable|string',
@@ -101,7 +102,7 @@ class AdminProductController extends Controller
             'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'is_active' => 'sometimes|boolean',
         ]);
-
+        Log::info('Update Product Validated Data:', ['validated_data' => $validated]);
         try {
             if ($request->hasFile('thumbnail')) {
                 if ($product->thumbnail) {
@@ -112,7 +113,7 @@ class AdminProductController extends Controller
             }
 
             $product->update($validated);
-
+            Log::info('Update Product After Save:', ['updated_product' => $product->fresh()]);
             // Kembalikan data produk yang diperbarui
             // Order item yang sudah ada akan terus menggunakan harga lama mereka
             return response()->json($product);

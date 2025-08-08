@@ -140,7 +140,7 @@ export default {
         if (this.form.thumbnail) {
           formData.append('thumbnail', this.form.thumbnail);
         }
-        formData.append('is_active', this.form.is_active);
+      formData.append('is_active', this.form.is_active ? 1 : 0);
 
         const response = await productService.createAdminProduct(formData);
 

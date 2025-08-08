@@ -36,7 +36,7 @@ class TemplateService {
   async updateAdminTemplate(id, templateData) {
     try {
       // Gunakan _method=PUT untuk spoofing jika FormData
-      const response = await api.put(`/admin/templates/${id}`, templateData, {
+      const response = await api.post(`/admin/templates/${id}`, templateData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       return response.data;

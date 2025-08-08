@@ -289,17 +289,19 @@ export default {
 
       try {
         const formData = new FormData();
-        formData.append('_method', 'PUT');
-
         formData.append('name', this.form.name);
         formData.append('product_id', this.form.product_id);
         formData.append('is_active', this.form.is_active ? '1' : '0');
+        formData.append('_method', 'PUT');
 
         if (this.form.sample_image) {
           formData.append('sample_image', this.form.sample_image);
         }
 
-        formData.append('layout_data', JSON.stringify(this.form.layout_data));
+    formData.append('layout_data[layout_type]', this.form.layout_data.layout_type);
+    formData.append('layout_data[dimensions]', this.form.layout_data.dimensions);
+    formData.append('layout_data[pages]', this.form.layout_data.pages);
+    formData.append('layout_data[photo_slots]', this.form.layout_data.photo_slots);
 
         const response = await templateService.updateAdminTemplate(this.id, formData);
 
