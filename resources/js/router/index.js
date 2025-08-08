@@ -116,6 +116,22 @@ const routes = [
           component: () => import('../views/admin/deskprints/Edit.vue'),
           props: true
       },
+      {
+    path: 'coupons',
+    name: 'AdminCoupons', // <-- Untuk link di sidebar AdminLayout.vue
+    component: () => import('../views/admin/coupons/Index.vue')
+    },
+    {
+        path: 'coupons/create',
+        name: 'AdminCouponCreate',
+        component: () => import('../views/admin/coupons/Create.vue')
+    },
+    {
+        path: 'coupons/:id/edit',
+        name: 'AdminCouponEdit',
+        component: () => import('../views/admin/coupons/Edit.vue'),
+        props: true
+    },
       
     ]
   },
