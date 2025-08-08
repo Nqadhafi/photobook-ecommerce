@@ -202,7 +202,11 @@ class AdminOrderController extends Controller
      */
     public function dashboard(Request $request): JsonResponse
     {
-         // Contoh statistik sederhana
+        // Gunakan Carbon untuk mendapatkan awal dan akhir bulan
+        $startOfMonth = now()->startOfMonth();
+        $endOfMonth = now()->endOfMonth();
+
+        // Contoh statistik sederhana
         $stats = [
             'total_orders' => PhotobookOrder::count(),
             'orders_pending' => PhotobookOrder::where('status', 'pending')->count(),
@@ -210,6 +214,32 @@ class AdminOrderController extends Controller
             'orders_processing' => PhotobookOrder::where('status', 'processing')->count(),
             // Tambahkan statistik lain yang relevan
         ];
+
+        // Tambahkan total amount untuk bulan ini
+        $stats['total_amount_this_month'] = PhotobookOrder::whereBetween('created_at', [$startOfMonth, $endOfMonth])
+            ->sum('total_amount');
+
+        // --- PERUBAHAN DISINI ---
+        // Tambahkan data untuk grafik tren order (6 bulan terakhir)
+        $orderTrends = [];
+
+        for ($i = 5; $i >= 0; $i--) {
+            $monthStart = now()->subMonths($i)->startOfMonth();
+            $monthEnd = now()->subMonths($i)->endOfMonth();
+            $monthName = $monthStart->format('M Y');
+
+            $orderCount = PhotobookOrder::whereBetween('created_at', [$monthStart, $monthEnd])->count();
+            $orderTotal = PhotobookOrder::whereBetween('created_at', [$monthStart, $monthEnd])->sum('total_amount');
+
+            $orderTrends[] = [
+                'month' => $monthName,
+                'count' => $orderCount,
+                'total_amount' => $orderTotal,
+            ];
+        }
+
+        $stats['order_trends'] = $orderTrends;
+        // --- AKHIR PERUBAHAN ---
 
         return response()->json($stats);
     }
