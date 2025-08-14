@@ -20,6 +20,15 @@ class OrderService {
     }
   }
 
+    async validateCoupon(couponCode) {
+    try {
+      const response = await api.post('/validate-coupon', { coupon_code: couponCode });
+      return response.data; // Harus berisi data kupon jika valid
+    } catch (error) {
+      throw error.response?.data || { error: 'Invalid or expired coupon.' };
+    }
+  }
+
   async getOrders(params = {}) {
     try {
       const response = await api.get('/orders', { params });

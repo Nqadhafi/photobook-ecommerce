@@ -69,12 +69,66 @@
                   </b-col>
                 </b-row>
               </b-list-group-item>
-              
-              <b-list-group-item class="d-flex justify-content-between bg-light">
-                <h5 class="mb-0">Total</h5>
-                <h5 class="mb-0 text-primary">Rp {{ formatCurrency(cartTotal) }}</h5>
-              </b-list-group-item>
             </b-list-group>
+          </b-card>
+
+          <!-- Coupon Section -->
+          <b-card class="mb-4">
+            <b-card-title><b-icon icon="tag"></b-icon> Coupon Code</b-card-title>
+            <b-form @submit.prevent="applyCoupon">
+              <b-row>
+                <b-col md="8">
+                  <b-form-group
+                    label="Enter your coupon code"
+                    label-for="coupon-code"
+                    :state="couponError ? false : null"
+                    :invalid-feedback="couponError"
+                  >
+                    <b-form-input
+                      id="coupon-code"
+                      v-model="couponCode"
+                      type="text"
+                      placeholder="Enter coupon code"
+                      :disabled="couponLoading || !!appliedCoupon"
+                      required
+                    ></b-form-input>
+                  </b-form-group>
+                </b-col>
+                <b-col md="4">
+                  <b-button
+                    type="submit"
+                    variant="outline-primary"
+                    :disabled="couponLoading || !couponCode.trim() || !!appliedCoupon"
+                    block
+                  >
+                    <template v-if="couponLoading">
+                      <b-spinner small></b-spinner> Applying...
+                    </template>
+                    <template v-else-if="appliedCoupon">
+                      Applied
+                    </template>
+                    <template v-else>
+                      Apply Coupon
+                    </template>
+                  </b-button>
+                </b-col>
+              </b-row>
+            </b-form>
+
+            <b-alert v-if="appliedCoupon" variant="success" show class="mt-3 mb-0">
+              <b-icon icon="check-circle"></b-icon>
+              Coupon <strong>{{ appliedCoupon.code }}</strong> applied!
+              You save <strong>Rp {{ formatCurrency(discountValue) }}</strong>.
+              <b-button
+                size="sm"
+                variant="link"
+                class="p-0 ml-2"
+                @click="removeCoupon"
+                :disabled="processing"
+              >
+                (Remove)
+              </b-button>
+            </b-alert>
           </b-card>
 
           <!-- Customer Information -->
@@ -221,7 +275,11 @@
             <b-list-group flush>
               <b-list-group-item class="d-flex justify-content-between">
                 <span>Subtotal</span>
-                <strong>Rp {{ formatCurrency(cartTotal) }}</strong>
+                <strong>Rp {{ formatCurrency(cartSubtotal) }}</strong>
+              </b-list-group-item>
+              <b-list-group-item v-if="appliedCoupon" class="d-flex justify-content-between text-success">
+                <span>Discount ({{ appliedCoupon.code }})</span>
+                <strong>- Rp {{ formatCurrency(discountValue) }}</strong>
               </b-list-group-item>
               <b-list-group-item class="d-flex justify-content-between">
                 <span>Shipping</span>
@@ -307,11 +365,37 @@ export default {
         province: ''
       },
       orderNotes: '',
-      agreeToTerms: false
+      agreeToTerms: false,
+      // --- Tambahkan data untuk kupon ---
+      couponCode: '',
+      appliedCoupon: null,
+      couponLoading: false,
+      couponError: null
+      // ---
     };
   },
   computed: {
-    ...mapGetters('cart', ['cartItems', 'cartTotal', 'isEmpty'])
+    ...mapGetters('cart', ['cartItems', 'isEmpty']),
+    // --- Tambahkan computed untuk subtotal, total, dan diskon ---
+    cartSubtotal() {
+        return this.cartItems.reduce((sum, item) => {
+            return sum + (item.quantity * item.product.price);
+        }, 0);
+    },
+    cartTotal() {
+        if (this.appliedCoupon && this.appliedCoupon.discount_percent !== undefined) {
+            const discount = (this.appliedCoupon.discount_percent / 100) * this.cartSubtotal;
+            return Math.max(this.cartSubtotal - discount, 0);
+        }
+        return this.cartSubtotal;
+    },
+    discountValue() {
+         if (this.appliedCoupon && this.appliedCoupon.discount_percent !== undefined) {
+            return (this.appliedCoupon.discount_percent / 100) * this.cartSubtotal;
+         }
+         return 0;
+    }
+    // ---
   },
   async created() {
     await this.loadCheckoutData();
@@ -322,10 +406,8 @@ export default {
     async loadCheckoutData() {
       this.loading = true;
       try {
-        // Load cart data
         await this.$store.dispatch('cart/loadCart');
         
-        // Pre-fill customer info from user profile
         const user = this.$store.getters['auth/user'];
         if (user) {
           this.customerInfo.name = user.name;
@@ -352,6 +434,45 @@ export default {
       }
     },
     
+    // --- Tambahkan methods untuk kupon ---
+    async applyCoupon() {
+        if (!this.couponCode.trim()) return;
+
+        this.couponLoading = true;
+        this.couponError = null;
+
+        try {
+            const response = await orderService.validateCoupon(this.couponCode);
+            this.appliedCoupon = response.coupon;
+            this.$store.dispatch('showNotification', {
+                title: 'Coupon Applied',
+                message: `Coupon ${this.appliedCoupon.code} applied successfully!`,
+                type: 'success'
+            });
+        } catch (error) {
+            console.error('Failed to apply coupon:', error);
+            this.couponError = error.error || 'Invalid or expired coupon code.';
+            this.$store.dispatch('showNotification', {
+                title: 'Coupon Error',
+                message: this.couponError,
+                type: 'danger'
+            });
+        } finally {
+            this.couponLoading = false;
+        }
+    },
+    removeCoupon() {
+        this.appliedCoupon = null;
+        this.couponCode = '';
+        this.couponError = null;
+        this.$store.dispatch('showNotification', {
+            title: 'Coupon Removed',
+            message: 'Coupon has been removed.',
+            type: 'info'
+        });
+    },
+    // ---
+
     async processCheckout() {
       if (!this.agreeToTerms) {
         this.$store.dispatch('showNotification', {
@@ -367,23 +488,32 @@ export default {
       
       try {
         const orderData = {
-          customer_info: this.customerInfo,
-          notes: this.orderNotes
+            // customer_info: this.customerInfo, // Format lama, tidak digunakan
+            // notes: this.orderNotes, // Format lama, tidak digunakan
+            // --- Gunakan format data customer yang sesuai dengan validasi backend ---
+            customer_name: this.customerInfo.name,
+            customer_email: this.customerInfo.email,
+            customer_phone: this.customerInfo.phone,
+            customer_address: this.customerInfo.address,
+            customer_city: this.customerInfo.city,
+            customer_postal_code: this.customerInfo.postal_code,
+            // customer_province: this.customerInfo.province, // Backend mungkin tidak butuh ini
+            notes: this.orderNotes,
+            // --- Tambahkan kode kupon ---
+            coupon_code: this.appliedCoupon ? this.appliedCoupon.code : null
+            // ---
         };
         
         const response = await orderService.checkout(orderData);
         
-        // Success - redirect to payment or order confirmation
         this.$store.dispatch('showNotification', {
           title: 'Success',
           message: 'Order placed successfully!',
           type: 'success'
         });
         
-        // Clear cart
         await this.$store.dispatch('cart/loadCart');
         
-        // Redirect to order detail for payment
         this.$router.push({
           name: 'OrderDetail',
           params: { id: response.order.id }
@@ -391,7 +521,13 @@ export default {
         
       } catch (error) {
         console.error('Checkout failed:', error);
-        this.error = error.message || 'Failed to process checkout. Please try again.';
+        // Tangani error spesifik kupon dari backend jika perlu
+        if (error.error && error.error.includes('coupon')) {
+             this.couponError = error.error;
+             // Opsional: Hapus kupon yang gagal
+             // this.removeCoupon();
+        }
+        this.error = error.error || 'Failed to process checkout. Please try again.';
         this.$store.dispatch('showNotification', {
           title: 'Error',
           message: this.error,

@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminTemplateController;
 use App\Http\Controllers\Admin\AdminCouponController;
+use App\Http\Controllers\CouponController;
 use App\Http\Controllers\Admin\AdminDeskprintController;
 
 
@@ -87,6 +88,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders/{order}', [OrderHistoryController::class, 'show']);
     Route::get('/orders/{order}/timeline', [OrderHistoryController::class, 'timeline']);
     Route::post('/orders/{order}/cancel', [PhotobookOrderController::class, 'cancelOrder']);
+    Route::post('/validate-coupon', [CouponController::class, 'validateCoupon']);
 // Route untuk Webhook Midtrans (TIDAK menggunakan auth middleware)
 // Midtrans akan mengakses ini secara langsung
 Route::post('/webhook/midtrans', [MidtransWebhookController::class, 'handle'])
