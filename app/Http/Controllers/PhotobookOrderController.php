@@ -92,16 +92,8 @@ class PhotobookOrderController extends Controller
             return response()->json(['error' => 'Your cart is empty'], 400);
         }
 
-        // --- 5. Validasi profil customer ada (opsional untuk versi awal) ---
-        // Kita asumsikan sudah ada dari test setup
-        // Tambahkan pengecekan keberadaan profil jika diperlukan:
-        /*
-        if (!$user->photobookProfile) {
-             return response()->json(['error' => 'Customer profile information is missing. Please update your profile.'], 400);
-        }
-        */
 
-        // --- 6. Hitung subtotal ---
+        // --- 5. Hitung subtotal ---
         $subTotalAmount = 0;
         $hasInvalidItem = false; // Flag untuk item yang tidak valid
         foreach ($cartItems as $item) {
@@ -114,7 +106,6 @@ class PhotobookOrderController extends Controller
                 // Untuk sekarang, kita akhiri proses
                 return response()->json(['error' => 'One or more items in your cart are invalid. Please review your cart.'], 400);
             }
-            // Bisa juga mengecek $item->template jika diperlukan
             $subTotalAmount += $item->quantity * $item->product->price;
         }
 
@@ -159,10 +150,6 @@ class PhotobookOrderController extends Controller
                     'pickup_code' => strtoupper(substr(md5(uniqid()), 0, 6)),
                 ];
 
-                // Jika Anda menyimpan ID kupon di tabel orders (misalnya, kolom coupon_id):
-                // if ($coupon) {
-                //     $orderData['coupon_id'] = $coupon->id;
-                // }
 
                 $order = \App\Models\PhotobookOrder::create($orderData);
 
@@ -258,14 +245,6 @@ class PhotobookOrderController extends Controller
                             ->where('id', $coupon->id)
                             ->increment('times_used');
 
-                        // (Opsional) Catat penggunaan per user jika diperlukan dan menggunakan tabel terpisah
-                        // DB::table('coupon_user')->insert([
-                        //     'coupon_id' => $coupon->id,
-                        //     'user_id' => $user->id,
-                        //     'order_id' => $order->id,
-                        //     'created_at' => now(),
-                        //     'updated_at' => now(),
-                        // ]);
 
                     } catch (\Exception $e) {
                         // Jika gagal menautkan kupon, log error tetapi jangan batalkan order
@@ -322,142 +301,6 @@ class PhotobookOrderController extends Controller
         }
     }
 
-    public function uploadFiles(Request $request, PhotobookOrder $order): JsonResponse
-    {
-        // 1. Authorization: Pastikan user memiliki order ini
-        if ($request->user()->id !== $order->user_id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        // 2. Validasi status order
-        // Izinkan upload untuk status 'paid' dan 'file_upload'
-        if (!in_array($order->status, ['paid', 'file_upload'])) {
-            return response()->json(['error' => 'Order is not eligible for file upload.'], 400);
-        }
-
-        // 3. Validasi input
-        $validator = Validator::make($request->all(), [
-            'files' => 'required|array|min:1',
-            'files.*.order_item_id' => [
-                'required',
-                'integer',
-                // Validasi bahwa order_item_id milik order ini
-                Rule::exists('photobook_order_items', 'id')->where(function ($query) use ($order) {
-                    $query->where('order_id', $order->id);
-                }),
-            ],
-            'files.*.file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240', // Max 10MB
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $validatedData = $validator->validated();
-        $uploadedFiles = []; // Untuk menyimpan data file yang berhasil diupload
-        $filesToProcess = $validatedData['files'];
-
-        try {
-            // 4. Proses upload file dalam transaksi database untuk konsistensi
-            $uploadedFiles = DB::transaction(function () use ($filesToProcess, $order) {
-                $uploadedInTransaction = [];
-
-                foreach ($filesToProcess as $fileData) {
-                    $uploadedFile = $fileData['file'];
-                    $orderItemId = $fileData['order_item_id'];
-
-                    // Buat nama file unik
-                    $filename = uniqid() . '_' . time() . '.' . $uploadedFile->getClientOriginalExtension();
-
-                    // --- UPLOAD KE CLOUDFLARE R2 ---
-                    // Simpan file ke disk 'r2' yang telah dikonfigurasi
-                    $pathInR2 = $uploadedFile->storeAs('files', $filename, 'r2');
-                    // Contoh nilai $pathInR2: 'files/abc123_1678886400.jpg'
-                    // File sebenarnya di R2: 'uploads/files/abc123_1678886400.jpg' (karena config 'root' => 'uploads')
-
-                    // --- SIMPAN INFORMASI FILE KE DATABASE ---
-                    $fileRecord = PhotobookOrderFile::create([
-                        'order_id' => $order->id,
-                        'order_item_id' => $orderItemId,
-                        'file_path' => $pathInR2, // Simpan path relatif dari root bucket R2
-                        // Opsional: Simpan informasi tambahan
-                        'original_name' => $uploadedFile->getClientOriginalName(),
-                        'size' => $uploadedFile->getSize(),
-                        'mime_type' => $uploadedFile->getMimeType(),
-                        'status' => 'uploaded', // Atau 'confirmed' jika tidak perlu review admin
-                        'uploaded_at' => now(),
-                        // Jika Anda menyimpan URL publik di .env R2_URL:
-                        // 'public_url' => rtrim(env('R2_URL'), '/') . '/uploads/' . basename($pathInR2),
-                    ]);
-
-                    // Tambahkan ke array hasil sukses
-                    // Mengembalikan data yang relevan untuk frontend, termasuk ID record database
-                    $uploadedInTransaction[] = [
-                        'id' => $fileRecord->id, // ID dari record database
-                        'order_item_id' => $orderItemId,
-                        'original_name' => $fileRecord->original_name,
-                        'size' => $fileRecord->size,
-                        'file_path' => $fileRecord->file_path, // Path di R2
-                        // 'public_url' => $fileRecord->public_url, // Jika disimpan
-                    ];
-                }
-
-                return $uploadedInTransaction;
-            });
-
-            // 5. Kirim notifikasi setelah semua file berhasil diupload (di luar transaksi)
-            if (count($uploadedFiles) > 0) {
-                $this->notificationService->notifyCustomer(
-                    $request->user(),
-                    'File(s) Uploaded',
-                    count($uploadedFiles) . " design file(s) for order #{$order->order_number} have been uploaded successfully.",
-                    $order
-                );
-                $this->notificationService->notifyAdmin(
-                    'Files Uploaded for Order',
-                    count($uploadedFiles) . " new file(s) have been uploaded for order #{$order->order_number}. Please review them.",
-                    $order
-                );
-            }
-
-            // 6. (Opsional) Update status order jika semua item sudah punya file
-            // Logika ini bisa disesuaikan. Contoh sederhana:
-            // Jika status awal 'paid' dan berhasil upload, ubah ke 'file_upload'
-            if ($order->status === 'paid' && count($uploadedFiles) > 0) {
-                 // Anda bisa menambahkan logika yang lebih kompleks di sini
-                 // Misalnya, periksa apakah semua item dalam order ini sudah memiliki file.
-                 // Untuk sekarang, kita asumsikan bahwa berhasil upload berarti siap untuk diproses.
-                 $order->update(['status' => 'file_upload']);
-                 // Atau langsung ke 'processing' jika memang sesuai logika bisnis Anda:
-                 // $order->update(['status' => 'processing']);
-            }
-            // Jika status sudah 'file_upload', tidak perlu diubah lagi.
-
-            // 7. Kembalikan response sukses dengan data file yang diupload
-            return response()->json([
-                'message' => count($uploadedFiles) . ' file(s) uploaded successfully',
-                'uploaded_count' => count($uploadedFiles),
-                'uploaded_files' => $uploadedFiles // Data file yang berhasil
-            ], 200);
-
-        } catch (\Exception $e) {
-            // 8. Penanganan error: Log error dengan detail
-            Log::error('File Upload Error (R2): ' . $e->getMessage(), [
-                'order_id' => $order->id,
-                'user_id' => $request->user()->id,
-                'exception' => $e
-            ]);
-
-            // Kembalikan error response yang umum
-            // Frontend dapat menggunakan ini untuk menawarkan retry.
-            return response()->json([
-                'error' => 'Failed to upload one or more files. Please try again.',
-                // Jika ingin lebih spesifik, bisa mengembalikan daftar file yang gagal
-                // tapi itu memerlukan logika pelacakan yang lebih kompleks di dalam loop.
-                // Untuk sekarang, pendekatan umum sudah cukup untuk trigger retry di frontend.
-            ], 500);
-        }
-    }
 
         public function cancelOrder(Request $request, PhotobookOrder $order): JsonResponse
     {
