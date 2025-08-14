@@ -41,6 +41,7 @@ class PhotobookOrderController extends Controller
         // --- 1. Validasi input termasuk kode kupon ---
         $validator = Validator::make($request->all(), [
             'coupon_code' => ['nullable', 'string', 'exists:coupons,code'], // Validasi dasar kode kupon
+            'notes'       => ['nullable', 'string', 'max:1000'],
         ]);
 
         if ($validator->fails()) {
@@ -65,21 +66,6 @@ class PhotobookOrderController extends Controller
                 return response()->json(['error' => 'This coupon is no longer available or has reached its usage limit.'], 400);
             }
 
-            // --- Validasi tambahan: Cek penggunaan per user jika diperlukan ---
-            // Misalnya, jika Anda memiliki relasi atau tabel untuk melacak penggunaan per user:
-            /*
-            if ($coupon->max_uses_per_user > 0) {
-                // Asumsi: ada relasi 'orders' di model User yang mengarah ke PhotobookOrder
-                // dan relasi 'coupons' di PhotobookOrder (many-to-many)
-                $userCouponUsageCount = $user->orders()->whereHas('coupons', function($query) use ($coupon) {
-                    $query->where('coupon_id', $coupon->id);
-                })->count();
-
-                if ($userCouponUsageCount >= $coupon->max_uses_per_user) {
-                    return response()->json(['error' => 'You have reached the maximum usage limit for this coupon.'], 400);
-                }
-            }
-            */
             // --- Akhir Validasi per user ---
         }
         // --- Akhir Validasi Kupon ---
@@ -125,10 +111,10 @@ class PhotobookOrderController extends Controller
 
         // --- 8. Hitung total akhir ---
         $totalAmount = max($subTotalAmount - $discountAmount, 0); // Total tidak boleh negatif
-
+        
         // --- 9. Buat order dalam transaction database ---
         try {
-            return DB::transaction(function () use ($user, $cartItems, $subTotalAmount, $discountAmount, $totalAmount, $coupon) {
+            return DB::transaction(function () use ($user, $cartItems, $subTotalAmount, $discountAmount, $totalAmount, $coupon,$request) {
                 // --- Generate order number unik ---
                 $orderNumber = 'PB' . strtoupper(uniqid());
 
@@ -148,6 +134,8 @@ class PhotobookOrderController extends Controller
                     'customer_city' => $user->photobookProfile->city ?? '',
                     'customer_postal_code' => $user->photobookProfile->postal_code ?? '',
                     'pickup_code' => strtoupper(substr(md5(uniqid()), 0, 6)),
+                    'notes'             => $request->input('notes'),
+                    
                 ];
 
 

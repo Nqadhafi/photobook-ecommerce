@@ -27,7 +27,15 @@
           <b-breadcrumb :items="breadcrumbItems"></b-breadcrumb>
         </b-col>
         <b-col lg="8">
+                    <!-- Order Timeline Component -->
+          <b-card class="mb-4">
+            <b-card-title>
+              <b-icon icon="kanban"></b-icon> Order Progress<span v-if="order">#{{ order.order_number }}</span>
+            </b-card-title>
+            <OrderTimeline/>
+          </b-card>
           <!-- Order Summary Card -->
+          <!-- --- PERUBAHAN: Tampilkan breakdown biaya di card ini --- -->
           <b-card class="mb-4">
             <b-card-title>
               <b-icon icon="receipt"></b-icon> Order Summary #{{ order.order_number }}
@@ -38,7 +46,7 @@
             <b-row>
               <b-col md="6">
                 <p class="mb-1"><strong>Date:</strong> {{ formatDate(order.created_at) }}</p>
-                <p class="mb-1"><strong>Total Amount:</strong> <strong>{{ formatCurrency(order.total_amount) }}</strong></p>
+                <!-- <p class="mb-1"><strong>Total Amount:</strong> <strong>{{ formatCurrency(order.total_amount) }}</strong></p> -->
               </b-col>
               <b-col md="6">
                 <p class="mb-1"><strong>Name:</strong> {{ order.customer_name }}</p>
@@ -46,18 +54,10 @@
                 <!-- <p class="mb-1"><strong>Phone:</strong> {{ order.customer_phone }}</p> -->
               </b-col>
             </b-row>
-          </b-card>
-          <!-- Order Timeline Component -->
-          <b-card class="mb-4">
-            <b-card-title>
-              <b-icon icon="kanban"></b-icon> Order Progress<span v-if="order">#{{ order.order_number }}</span>
-            </b-card-title>
-            <OrderTimeline/>
-          </b-card>
-          <!-- Order Items -->
-          <b-card class="mb-4">
-            <b-card-title><b-icon icon="list"></b-icon> Order Items</b-card-title>
+            <!-- --- Tambahkan breakdown biaya --- -->
+             <hr>
             <b-list-group flush>
+                          <b-list-group flush>
               <b-list-group-item v-for="item in order.items" :key="item.id">
                 <b-row class="align-items-center">
                   <b-col md="2" class="text-center mb-2 mb-md-0">
@@ -97,7 +97,29 @@
                 </b-row>
               </b-list-group-item>
             </b-list-group>
+              <b-list-group-item class="d-flex justify-content-between px-0">
+                <span>Subtotal</span>
+                <strong> {{ formatCurrency(order.sub_total_amount) }}</strong>
+              </b-list-group-item>
+              <b-list-group-item v-if="order.discount_amount && order.discount_amount > 0" class="d-flex justify-content-between px-0 text-success">
+                <span>
+                    Discount
+                    <span v-if="order.coupons && order.coupons.length > 0">
+                        ({{ order.coupons.map(c => c.code).join(', ') }})
+                    </span>
+                </span>
+                <strong>-  {{ formatCurrency(order.discount_amount) }}</strong>
+              </b-list-group-item>
+              <b-list-group-item class="d-flex justify-content-between px-0 bg-light">
+                <h5 class="mb-0">Total</h5>
+                <h5 class="mb-0 text-primary"> {{ formatCurrency(order.total_amount) }}</h5>
+              </b-list-group-item>
+            </b-list-group>
+            <!-- --- Akhir breakdown biaya --- -->
           </b-card>
+          <!-- --- AKHIR PERUBAHAN --- -->
+
+
           <!-- Customer Address -->
           <b-card class="mb-4">
             <b-card-title><b-icon icon="geo-alt"></b-icon> Shipping Address</b-card-title>
@@ -173,7 +195,7 @@
             <div v-else-if="order.status === 'file_upload'">
               <b-alert variant="success" show class="mb-3">
                 <b-icon icon="check-circle"></b-icon> <strong>Folder Ready!</strong><br>
-                <small class="text-muted">Status updated on {{ formatDate(order.updated_at) }}</small> <!-- Asumsi ada updated_at -->
+                <small class="text-muted">Status updated on {{ formatDate(order.updated_at) }} <!-- Asumsi ada updated_at --> </small>
               </b-alert>
               <p class="mb-2">
                 <b-icon icon="folder"></b-icon>
@@ -235,13 +257,15 @@
   </app-layout>
 </template>
 <script>
+// ... (imports tetap sama) ...
 import orderService from '../../services/orderService';
-import { loadScript } from '../../utils/helpers'; // Pastikan file helpers.js ada
-import OrderTimeline from './OrderTimeline.vue'; // <-- Impor komponen
+import { loadScript } from '../../utils/helpers';
+import OrderTimeline from './OrderTimeline.vue';
+
 export default {
   name: 'OrderDetail',
-    components: {
-    OrderTimeline // <-- Daftarkan komponen
+  components: {
+    OrderTimeline
   },
   data() {
     return {
@@ -252,7 +276,7 @@ export default {
       isCancelling: false,
       cancelError: null,
       isPaying: false,
-      snapToken: null // Akan diambil dari data order
+      snapToken: null
     };
   },
   computed: {
@@ -263,25 +287,18 @@ export default {
         { text: `Order #${this.order ? this.order.order_number : '...'}`, active: true }
       ];
     },
-    // --- PERUBAHAN: Tambahkan computed property untuk validasi slot foto --- //
-    /**
-     * Checks if photo slot information is defined for all order items.
-     * @returns {boolean} True if all items have defined photo slots, false otherwise.
-     */
     arePhotoSlotsDefinedForAllItems() {
       if (!this.order || !this.order.items || this.order.items.length === 0) {
         return false;
       }
 
       return this.order.items.every(item => {
-        // Check if template exists and has layout_data with photo_slots
         return item.template &&
                item.template.layout_data &&
                item.template.layout_data.photo_slots !== undefined &&
                item.template.layout_data.photo_slots !== null;
       });
     }
-    // --- AKHIR PERUBAHAN --- //
   },
   async created() {
     await this.loadOrder();
@@ -289,21 +306,17 @@ export default {
   methods: {
     async cancelOrder() {
       if (!this.order) return;
-      // Konfirmasi dari pengguna (opsional tapi disarankan)
       const confirmed = window.confirm(`Are you sure you want to cancel order #${this.order.order_number}? This action cannot be undone.`);
       if (!confirmed) return;
       this.isCancelling = true;
       this.cancelError = null;
       try {
-         // Gunakan orderService yang sudah diperbarui
          await orderService.cancelOrder(this.order.id);
-         // Tampilkan notifikasi sukses
          this.$store.dispatch('showNotification', {
             title: 'Order Cancelled',
             message: `Order #${this.order.order_number} has been cancelled.`,
             type: 'success'
          });
-         // Refresh data order untuk mendapatkan status terbaru
          await this.loadOrder();
       } catch (error) {
          console.error('Failed to cancel order:', error);
@@ -320,24 +333,21 @@ export default {
     async loadOrder() {
       this.loading = true;
       this.error = null;
-      this.paymentError = null; // Clear previous payment errors
+      this.paymentError = null;
       try {
         const orderId = this.$route.params.id;
         const response = await orderService.getOrder(orderId);
         this.order = response.data;
-        // --- Ambil snap_token ---
-        // Asumsi backend mengirim snap_token dalam response order
-        // Ini bisa dalam `order.snap_token` atau melalui relasi `order.payment.snap_token`
-        // Periksa struktur respons dari `PhotobookOrderController@checkout`
-        // Cara 1: Jika snap_token dikirim langsung di level order
+        // --- Pastikan data kupon di-load ---
+        // Backend perlu mengirim relasi 'coupons' saat getOrder
+        // Di controller getOrder, tambahkan: ->with(['items.product', 'items.template', 'payment', 'coupons'])
+        // ---
         if (this.order.snap_token) {
             this.snapToken = this.order.snap_token;
         }
-        // Cara 2: Jika snap_token ada di relasi payment (lebih umum)
         else if (this.order.payment && this.order.payment.snap_token) {
             this.snapToken = this.order.payment.snap_token;
         }
-        // Jika tidak ditemukan, snapToken tetap null, dan komponen akan menangani kasus ini
       } catch (error) {
         console.error('Failed to load order:', error);
         this.error = error.message || 'Failed to load order details. Please try again.';
@@ -354,18 +364,14 @@ export default {
       this.isPaying = true;
       this.paymentError = null;
       try {
-        // --- 1. Muat Snap.js ---
-        // Gunakan Client Key dari environment variable Laravel Mix
         const clientKey = process.env.MIX_MIDTRANS_CLIENT_KEY;
         if (!clientKey) {
             throw new Error('MIDTRANS_CLIENT_KEY is not configured in .env file.');
         }
         await loadScript('https://app.sandbox.midtrans.com/snap/snap.js', 'data-client-key', clientKey);
-        // --- 2. Pastikan window.snap tersedia ---
         if (typeof window.snap === 'undefined') {
             throw new Error('Failed to load Midtrans Snap.js. Please check your internet connection and try again.');
         }
-        // --- 3. Buka halaman pembayaran Snap ---
         window.snap.pay(this.snapToken, {
             onSuccess: (result) => {
                 console.log('Payment Success:', result);
@@ -381,12 +387,7 @@ export default {
             },
             onClose: () => {
                 console.log('Payment Popup Closed');
-                // Pengguna menutup popup. Tidak berarti sukses atau gagal.
-                // Bisa memilih untuk tidak melakukan apa-apa, atau memberi info.
-                // Opsi: Refresh status order dari backend untuk memastikan tidak ada perubahan yang terlewat.
-                // Untuk sekarang, kita hanya menghentikan indikator loading.
                 this.isPaying = false;
-                 // Opsional: Refresh status order dari backend?
                  this.loadOrder();
             }
         });
@@ -397,9 +398,7 @@ export default {
       }
     },
     handlePaymentOutcome(outcome, result) {
-        // --- Tangani hasil pembayaran dari callback Snap.js ---
         this.isPaying = false;
-        // Tampilkan notifikasi berdasarkan outcome
         let notification = { title: '', message: '', type: '' };
         if (outcome === 'success') {
             notification = {
@@ -407,22 +406,15 @@ export default {
                 message: 'Your payment has been processed successfully. Redirecting...',
                 type: 'success'
             };
-            // Refresh data order untuk mendapatkan status terbaru
-            // Tunggu sebentar sebelum refresh agar backend sempat memproses notifikasi
             setTimeout(async () => {
                 await this.loadOrder();
-                // Opsional: Redirect otomatis ke halaman upload jika status sudah paid
-                // if (this.order && this.order.status === 'paid') {
-                //     this.$router.push({ name: 'FileUpload', params: { id: this.order.id } });
-                // }
-            }, 2000); // Tunggu 2 detik
+            }, 2000);
         } else if (outcome === 'pending') {
              notification = {
                 title: 'Payment Pending',
                 message: result.status_message || 'Your payment is being processed. We will notify you once it is confirmed.',
                 type: 'warning'
             };
-            // Refresh data order untuk mendapatkan status terbaru
             setTimeout(async () => {
                 await this.loadOrder();
             }, 2000);
@@ -432,18 +424,16 @@ export default {
                 message: result.status_message || 'An error occurred during payment. Please try again or check your transaction history.',
                 type: 'danger'
             };
-            // Tidak perlu refresh otomatis untuk error
         }
         if (notification.title) {
             this.$store.dispatch('showNotification', notification);
         }
-        // Anda juga bisa menyimpan `result` ke log atau database jika diperlukan
     },
     getStatusVariant(status) {
       const statusMap = {
         'pending': 'warning',
-        'paid': 'info', // Ubah warna untuk status 'paid' yang baru
-        'file_upload': 'success', // Warna untuk folder siap
+        'paid': 'info',
+        'file_upload': 'success',
         'processing': 'primary',
         'ready': 'success',
         'completed': 'success',
@@ -454,8 +444,8 @@ export default {
     formatStatus(status) {
        const statusLabels = {
         'pending': 'Pending Payment',
-        'paid': 'Payment Received (Preparing Folder)', // Label deskriptif baru
-        'file_upload': 'Folder Ready for Upload', // Label deskriptif baru
+        'paid': 'Payment Received (Preparing Folder)',
+        'file_upload': 'Folder Ready for Upload',
         'processing': 'In Production',
         'ready': 'Ready for Pickup',
         'completed': 'Completed',
@@ -466,29 +456,25 @@ export default {
     formatDate(dateString) {
       if (!dateString) return 'N/A';
       const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-      return new Date(dateString).toLocaleDateString('id-ID', options); // Gunakan locale Indonesia
+      return new Date(dateString).toLocaleDateString('id-ID', options);
     },
     formatCurrency(amount) {
+      // --- PERUBAHAN: Gunakan Intl.NumberFormat untuk format IDR yang konsisten ---
       return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+      // ---
     },
     getProductImage(product) {
       if (product && product.thumbnail) {
         if (product.thumbnail.startsWith('http')) {
           return product.thumbnail;
         }
-        return product.thumbnail; // Asumsi path relatif sudah benar
+        return product.thumbnail;
       }
-      return 'https://www.aaronfaber.com/wp-content/uploads/2017/03/product-placeholder-wp.jpg'; // Placeholder umum
+      return 'https://www.aaronfaber.com/wp-content/uploads/2017/03/product-placeholder-wp.jpg';
     },
     onItemImageError(event) {
       event.target.src = 'https://www.aaronfaber.com/wp-content/uploads/2017/03/product-placeholder-wp.jpg';
     },
-    // --- PERUBAHAN: Tambahkan helper method untuk menghitung slot per item --- //
-    /**
-     * Calculates the total number of photo slots required for an order item.
-     * @param {Object} item - The order item object.
-     * @returns {number|null} Total slots required, or null if data is missing.
-     */
     getTotalPhotoSlotsForItem(item) {
       if (!item.template || !item.template.layout_data) {
         return null;
@@ -499,17 +485,15 @@ export default {
         return null;
       }
 
-      // If design_same is true, only one set of photos is needed regardless of quantity
-      // If design_same is false, each book needs its own set of photos
       const numberOfSets = item.design_same ? 1 : item.quantity;
 
       return photoSlotsPerBook * numberOfSets;
     },
-    // --- AKHIR PERUBAHAN --- //
   }
 };
 </script>
 <style scoped>
+/* ... (styles tetap sama) ... */
 .product-thumbnail {
   max-height: 80px;
   object-fit: cover;

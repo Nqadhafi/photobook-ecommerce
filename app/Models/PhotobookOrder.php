@@ -13,6 +13,8 @@ class PhotobookOrder extends Model
         'user_id',
         'order_number',
         'total_amount',
+        'sub_total_amount',
+        'discount_amount',
         'status',
         'customer_name',
         'customer_email',
