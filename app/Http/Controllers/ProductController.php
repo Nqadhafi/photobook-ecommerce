@@ -14,11 +14,54 @@ class ProductController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $products = PhotobookProduct::where('is_active', true)
+        $query = PhotobookProduct::where('is_active', true)
             ->with('templates') // Eager load templates
-            ->paginate(12); // Pagination untuk performance
+            ->selectRaw('photobook_products.*, COALESCE(order_items_summary.total_sold, 0) as total_sold')
+            ->leftJoinSub(
+                'SELECT product_id, SUM(quantity) as total_sold FROM photobook_order_items GROUP BY product_id',
+                'order_items_summary',
+                'photobook_products.id',
+                '=',
+                'order_items_summary.product_id'
+            );
+
+        // Pencarian berdasarkan nama produk
+        if ($request->has('search') && $request->search) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        // Filter berdasarkan harga
+        if ($request->has('price_min') && $request->price_min) {
+            $query->where('price', '>=', $request->price_min);
+        }
+        if ($request->has('price_max') && $request->price_max) {
+            $query->where('price', '<=', $request->price_max);
+        }
+
+        // Sorting
+        $sortBy = $request->get('sort', 'name');
+        switch ($sortBy) {
+            case 'price':
+                $query->orderBy('price', 'asc');
+                break;
+            case 'price_desc':
+                $query->orderBy('price', 'desc');
+                break;
+            case 'created_at':
+                $query->orderBy('created_at', 'desc');
+                break;
+            case 'best_selling':
+                $query->orderByDesc('total_sold');
+                break;
+            case 'name':
+            default:
+                $query->orderBy('name', 'asc');
+                break;
+        }
+
+        $products = $query->paginate(12); // Pagination untuk performance
 
         return response()->json([
             'data' => $products->items(),

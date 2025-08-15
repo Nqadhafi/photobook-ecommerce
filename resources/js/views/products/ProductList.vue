@@ -5,7 +5,8 @@
       <b-row class="mb-4">
         <b-col>
           <h1>Our Photobook Collection</h1>
-          <p class="text-muted">Discover our premium photobook products</p>
+          <p class="text-muted" v-if="!searchQuery">Discover our premium photobook products</p>
+          <p class="text-muted" v-else>Search results for: "{{ searchQuery }}"</p>
         </b-col>
       </b-row>
 
@@ -34,12 +35,26 @@
           <b-card>
             <b-row class="align-items-center">
               <b-col md="6">
-                <b-form-input
-                  v-model="searchQuery"
-                  type="search"
-                  placeholder="Search products..."
-                  @input="onSearch"
-                ></b-form-input>
+                <b-form-group label="Filter Harga:">
+                  <b-row>
+                    <b-col>
+                      <b-form-input
+                        v-model="priceMin"
+                        type="number"
+                        placeholder="Min (Rp)"
+                        @input="onFilterChange"
+                      ></b-form-input>
+                    </b-col>
+                    <b-col>
+                      <b-form-input
+                        v-model="priceMax"
+                        type="number"
+                        placeholder="Max (Rp)"
+                        @input="onFilterChange"
+                      ></b-form-input>
+                    </b-col>
+                  </b-row>
+                </b-form-group>
               </b-col>
               <b-col md="6" class="text-md-right mt-2 mt-md-0">
                 <b-form-select
@@ -82,9 +97,14 @@
               <div class="mt-auto">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                   <h5 class="text-primary mb-0">Rp {{ formatCurrency(product.price) }}</h5>
-                  <b-badge v-if="product.templates && product.templates.length > 0" variant="info">
-                    {{ product.templates.length }} Templates
-                  </b-badge>
+                  <div>
+                    <b-badge v-if="product.templates && product.templates.length > 0" variant="info" class="mr-1">
+                      {{ product.templates.length }} Templates
+                    </b-badge>
+                    <b-badge v-if="product.total_sold > 0" variant="success">
+                      {{ product.total_sold }} Sold
+                    </b-badge>
+                  </div>
                 </div>
                 
                 <b-button 
@@ -129,29 +149,58 @@ export default {
       currentPage: 1,
       loading: false,
       error: null,
+      priceMin: '',
+      priceMax: '',
       searchQuery: '',
-      sortBy: 'name',
+      sortBy: 'created_at',
       sortOptions: [
-        { value: 'name', text: 'Sort by Name' },
-        { value: 'price', text: 'Sort by Price' },
-        { value: 'created_at', text: 'Sort by Newest' }
+        { value: 'price', text: 'Sort by Price (Low to High)' },
+        { value: 'price_desc', text: 'Sort by Price (High to Low)' },
+        { value: 'created_at', text: 'Sort by Newest' },
+        { value: 'best_selling', text: 'Sort by Best Selling' }
       ],
-      searchTimeout: null
+      filterTimeout: null
     };
   },
   async created() {
-    await this.loadProducts();
+    // Initialize search query from URL
+    this.searchQuery = this.$route.query.search || '';
+    // Load products with all parameters including search
+    await this.loadProducts(
+      this.$route.query.page || 1,
+      this.$route.query.sort || 'name',
+      this.$route.query.price_min || '',
+      this.$route.query.price_max || '',
+      this.searchQuery
+    );
+  },
+  watch: {
+    '$route.query': {
+      handler(newQuery) {
+        this.searchQuery = newQuery.search || '';
+        this.loadProducts(
+          newQuery.page || 1,
+          newQuery.sort || 'name',
+          newQuery.price_min || '',
+          newQuery.price_max || '',
+          this.searchQuery
+        );
+      },
+      immediate: true
+    }
   },
   methods: {
-    async loadProducts(page = 1, search = '', sort = 'name') {
+    async loadProducts(page = 1, sort = 'name', priceMin = '', priceMax = '', search = '') {
       this.loading = true;
       this.error = null;
       
       try {
         const params = {
           page: page,
-          search: search,
-          sort: sort
+          sort: sort,
+          price_min: priceMin,
+          price_max: priceMax,
+          search: search
         };
         
         const response = await productService.getProducts(params);
@@ -167,19 +216,19 @@ export default {
     },
     
     onPageChange(page) {
-      this.loadProducts(page, this.searchQuery, this.sortBy);
+      this.loadProducts(page, this.sortBy, this.priceMin, this.priceMax, this.searchQuery);
     },
     
-    onSearch() {
-      // Debounce search
-      clearTimeout(this.searchTimeout);
-      this.searchTimeout = setTimeout(() => {
-        this.loadProducts(1, this.searchQuery, this.sortBy);
+    onFilterChange() {
+      // Debounce filter changes
+      clearTimeout(this.filterTimeout);
+      this.filterTimeout = setTimeout(() => {
+        this.loadProducts(1, this.sortBy, this.priceMin, this.priceMax, this.searchQuery);
       }, 500);
     },
     
     onSortChange() {
-      this.loadProducts(1, this.searchQuery, this.sortBy);
+      this.loadProducts(1, this.sortBy, this.priceMin, this.priceMax, this.searchQuery);
     },
     
     formatCurrency(amount) {
@@ -197,7 +246,7 @@ export default {
         if (product.thumbnail.startsWith('http')) {
           return product.thumbnail;
         }
-        return product.thumbnail;
+        return '/storage/' + product.thumbnail;
       }
       return 'https://www.aaronfaber.com/wp-content/uploads/2017/03/product-placeholder-wp.jpg';
     },
