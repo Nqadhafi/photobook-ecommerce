@@ -53,7 +53,7 @@
       <!-- ===== NAVBAR INTI ===== -->
       <b-navbar
         toggleable="lg"
-        type="light"
+        type="dark"
         variant="white"
         class="mainbar position-relative px-3 py-2 border-bottom border-light shadow-sm"
         fixed="top"
@@ -86,8 +86,8 @@
 
           <!-- Right: Cart Only -->
           <b-navbar-nav class="d-flex align-items-center gap-1 ms-auto z-2">
-            <!-- Cart -->
-            <b-nav-item :to="{ name: 'Cart' }" class="position-relative p-2 text-white hover-white" active-class="text-light">
+            <!-- Cart (Desktop) -->
+            <b-nav-item :to="{ name: 'Cart' }" class="position-relative p-2 text-white hover-white d-none d-lg-block" active-class="text-light">
               <b-icon icon="cart" font-scale="1.3" class="transition-scale"></b-icon>
               <b-badge
                 v-if="cartItemCount > 0"
@@ -132,9 +132,9 @@
           </b-navbar-nav>
         </div>
 
-        <!-- Search (mobile) -->
-        <div class="w-100 d-lg-none px-3 pb-2">
-          <b-form @submit.prevent="handleSearch">
+        <!-- Search & Cart (mobile) -->
+        <div class="w-100 d-lg-none px-3 pb-2 d-flex align-items-center gap-3">
+          <b-form @submit.prevent="handleSearch" class="flex-grow-1">
             <b-input-group class="rounded-pill shadow-sm">
               <b-form-input v-model="searchQuery" placeholder="Cari photobook…" class="px-4 py-2 border-0" />
               <b-input-group-append>
@@ -144,6 +144,17 @@
               </b-input-group-append>
             </b-input-group>
           </b-form>
+          <!-- Cart (Mobile) -->
+          <b-link :to="{ name: 'Cart' }" class="position-relative text-white hover-white flex-shrink-0">
+            <b-icon icon="cart" font-scale="1.3" class="transition-scale"></b-icon>
+            <b-badge
+              v-if="cartItemCount > 0"
+              variant="danger"
+              pill
+              class="position-absolute top-0 start-100 translate-middle px-2"
+              style="font-size:.7rem; min-width:18px;"
+            >{{ cartItemCount }}</b-badge>
+          </b-link>
         </div>
       </b-navbar>
     </div>
@@ -201,141 +212,244 @@
   </script>
 
   <style scoped>
-  /* Topbar */
-  .topbar{
-    background: linear-gradient(90deg, #ff6a3d, #ff3d6e);
-    color:#fff; font-size:.875rem;
-  }
-  .topbar-inner{
-    max-width:1200px; margin:0 auto; padding:.4rem 1rem;
-    display:flex; align-items:center; justify-content:space-between;
-  }
-  .topbar-inner .left{
-    display:flex; align-items:center; gap:.75rem;
-  }
-  .topbar-inner .right{
-    display:flex; align-items:center; gap:.75rem;
-  }
-  .topbar .link{ color:#fff; text-decoration:none; opacity:.95; transition: opacity .2s ease; }
-  .topbar .link:hover{ opacity:1; }
-  .icon-link{ color:#fff; text-decoration:none; opacity:.95; display:inline-flex; align-items:center; transition: opacity .2s ease; }
-  .icon-link:hover{ opacity:1; }
-  .divider{ opacity:.6; }
+/* ========================
+   TOPBAR (desktop)
+   ======================== */
+.topbar {
+  background: linear-gradient(90deg, #007bff, #17a2b8);
+  color: #fff;
+  font-size: .875rem;
+  z-index: 1035;
+}
+.topbar-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: .4rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.topbar-inner .left,
+.topbar-inner .right {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+.topbar .link {
+  color: #fff;
+  text-decoration: none;
+  opacity: .95;
+  transition: opacity .2s ease;
+}
+.topbar .link:hover {
+  opacity: 1;
+}
+.icon-link {
+  color: #fff;
+  text-decoration: none;
+  opacity: .95;
+  display: inline-flex;
+  align-items: center;
+  transition: opacity .2s ease;
+}
+.icon-link:hover {
+  opacity: 1;
+}
+.divider {
+  opacity: .6;
+}
 
-  /* Auth Links di Topbar */
-  .auth-links{
-    display:flex; align-items:center; gap:.5rem;
+/* Auth Links di Topbar */
+.auth-links {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.auth-link {
+  font-weight: 500;
+  padding: .25rem .5rem;
+  border-radius: .25rem;
+  transition: all .2s ease;
+}
+.auth-register {
+  background: rgba(255, 255, 255, .15);
+  border: 1px solid rgba(255, 255, 255, .3);
+}
+.auth-register:hover {
+  background: rgba(255, 255, 255, .25);
+  border-color: rgba(255, 255, 255, .5);
+}
+
+/* User Dropdown di Topbar */
+.user-dropdown-topbar {
+  position: relative;
+  z-index: 1040;
+}
+.user-dropdown-topbar .topbar-dropdown-toggle {
+  color: #fff !important;
+  text-decoration: none;
+  opacity: .95;
+  padding: .25rem .5rem;
+  border-radius: .25rem;
+  transition: all .2s ease;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  position: static;
+}
+.user-dropdown-topbar .topbar-dropdown-toggle:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, .15);
+}
+.user-dropdown-topbar .topbar-dropdown-toggle:focus {
+  box-shadow: none;
+}
+.topbar-dropdown-item {
+  font-size: .875rem;
+}
+
+/* ========================
+   NAVBAR (mainbar)
+   ======================== */
+.mainbar {
+  z-index: 1030;
+  background: linear-gradient(90deg, #007bff, #17a2b8);
+  border-bottom: none;
+}
+.navbar-gradient {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #007bff, #17a2b8);
+  z-index: -1;
+  pointer-events: none;
+}
+.container-fluid {
+  max-width: 1200px;
+}
+@media (max-width: 991.98px) {
+  .container-fluid {
+    padding: 0 1rem;
   }
-  .auth-link{
-    font-weight: 500;
-    padding: .25rem .5rem;
-    border-radius: .25rem;
-    transition: all .2s ease;
-  }
-  .auth-register{
-    background: rgba(255,255,255,.15);
-    border: 1px solid rgba(255,255,255,.3);
-  }
-  .auth-register:hover{
-    background: rgba(255,255,255,.25);
-    border-color: rgba(255,255,255,.5);
+}
+
+/* Search input sizes */
+.d-lg-flex > .form-control,
+.form-control-lg {
+  font-size: .95rem;
+}
+
+/* White text hover effect */
+.hover-white:hover {
+  color: #f8f9fa !important;
+  opacity: 0.9;
+}
+.text-white {
+  color: #fff !important;
+}
+
+/* Buttons & effects */
+.transition-scale {
+  transition: transform .2s ease;
+}
+.hover-primary:hover .transition-scale {
+  transform: scale(1.15);
+}
+.bg-gradient-primary {
+  background: linear-gradient(90deg, #0d6efd, #6f42c1);
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(13, 110, 253, .3);
+}
+.transition-fast {
+  transition: all .2s ease;
+}
+
+/* Spacer: ganti hot keywords */
+.hotkey-spacer {
+  padding-bottom: .75rem;
+  background: linear-gradient(90deg, #007bff, #17a2b8);
+}
+
+/* ========================
+   DROPDOWN ELEVATION (SEMUA MODE)
+   Gunakan class ini lewat menu-class="elevated-dropdown"
+   ======================== */
+:deep(.elevated-dropdown),
+.elevated-dropdown {
+  position: fixed !important;
+  z-index: 2000 !important;
+  inset: auto !important;
+  margin: 0 !important;
+  transform: translate3d(0, 0, 0) !important;
+  will-change: transform;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0;
+  background: #fff;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, .15);
+  border: 1px solid rgba(0, 0, 0, .05);
+  overflow-y: auto;
+}
+
+:deep(.elevated-dropdown.show),
+.elevated-dropdown.show {
+  z-index: 2000 !important;
+}
+
+/* ========================
+   MOBILE TUNING - POSISI DROPDOWN
+   ======================== */
+@media (max-width: 767.98px) {
+  :deep(.elevated-dropdown),
+  .elevated-dropdown {
+    left: 10px !important;
+    right: 10px !important;
+    top: 60px !important; /* Sesuaikan dengan tinggi navbar (60px aman) */
+    width: auto !important;
+    min-width: 180px !important;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
   }
 
-  /* User Dropdown di Topbar */
-  .user-dropdown-topbar {
-    position: relative;
-    z-index: 1040;
-  }
-  
-  .user-dropdown-topbar .topbar-dropdown-toggle{
-    color: #fff !important;
-    text-decoration: none;
-    opacity: .95;
-    padding: .25rem .5rem;
-    border-radius: .25rem;
-    transition: all .2s ease;
-    background: transparent;
-    border: none;
-    display: flex;
-    align-items: center;
-    position: relative;
-  }
-  .user-dropdown-topbar .topbar-dropdown-toggle:hover{
-    opacity: 1;
-    background: rgba(255,255,255,.15);
-  }
-  .user-dropdown-topbar .topbar-dropdown-toggle:focus{
-    box-shadow: none;
-  }
-  .topbar-dropdown-item{
-    font-size: .875rem;
-  }
-  
-  /* Dropdown Menu Styling */
-  .user-dropdown-topbar .dropdown-menu {
-    z-index: 1040;
-    margin-top: 0.5rem;
-    border: none;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-    border-radius: 0.5rem;
-    padding: 0.5rem 0;
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-  }
-  
-  .user-dropdown-topbar .dropdown-menu.show {
-    z-index: 1040;
+  /* Pastikan parent tidak memotong dropdown */
+  .navbar-wrapper,
+  .mainbar,
+  .container-fluid {
+    overflow: visible !important;
   }
 
-  /* Navbar Styling */
-  .mainbar{
-    z-index:1030;
-    background: linear-gradient(90deg, #ff6a3d, #ff3d6e);
-    border-bottom: none;
+  /* Hapus overflow yang bisa memotong dropdown */
+  .mainbar {
+    overflow: visible !important;
   }
-  .navbar-gradient{
-    content:'';
-    position:absolute;
-    inset:0;
-    background: linear-gradient(90deg, #ff6a3d, #ff3d6e);
-    z-index:-1;
-  }
-  .container-fluid{ max-width:1200px; }
-  
-  /* Ensure dropdown appears above navbar */
-  .user-dropdown-topbar .dropdown-menu {
-    z-index: 1040 !important;
-  }
-  
-  /* Fix for dropdown overlapping issues */
-  .topbar {
-    z-index: 1035;
-  }
+}
 
-  /* Search input sizes */
-  .d-lg-flex > .form-control, .form-control-lg{ font-size:.95rem; }
-  
-  /* White text hover effect */
-  .hover-white:hover {
-    color: #f8f9fa !important;
-    opacity: 0.9;
-  }
-  
-  .text-white {
-    color: #fff !important;
-  }
+/* ========================
+   Z-INDEX GUARDRAILS
+   ======================== */
+.user-dropdown-topbar .dropdown-menu,
+:deep(.user-dropdown-topbar .dropdown-menu) {
+  z-index: 2000 !important;
+}
+.topbar {
+  z-index: 1035;
+}
 
-  /* Buttons & effects */
-  .transition-scale{ transition:transform .2s ease; }
-  .hover-primary:hover .transition-scale{ transform:scale(1.15); }
-  .bg-gradient-primary{ background:linear-gradient(90deg,#0d6efd,#6f42c1); }
-  .hover-lift:hover{ transform:translateY(-2px); box-shadow:0 4px 12px rgba(13,110,253,.3); }
-  .transition-fast{ transition:all .2s ease; }
+/* ========================
+   HINDARI CLIPPING DARI PARENT
+   ======================== */
+.navbar-wrapper {
+  overflow: visible !important;
+  position: relative;
+  z-index: 1030;
+}
 
-  /* Spacer: ganti hot keywords */
-  .hotkey-spacer{ padding-bottom:.75rem; background:linear-gradient(90deg,#ff6a3d,#ff3d6e); }
-
-  /* Konten di bawah tidak ketutup header fixed */
-  /* .navbar-wrapper{ padding-top:116px; } kira2 topbar+navbar */
-  @media (max-width: 991.98px){ .container-fluid{ padding:0 1rem; } }
+/* Jika ada transform atau will-change yang bikin stacking context */
+:deep(.dropdown-menu) {
+  transform: translate3d(0, 0, 0) !important;
+}
   </style>
+
