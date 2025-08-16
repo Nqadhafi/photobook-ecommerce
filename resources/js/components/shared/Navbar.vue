@@ -18,14 +18,14 @@
           </div>
           
           <!-- Auth Section di Topbar -->
-          <div class="right">
-            <template v-if="isAuthenticated">
-              <b-dropdown right no-caret variant="link" class="user-dropdown-topbar" toggle-class="topbar-dropdown-toggle">
-                <template #button-content>
-                  <b-icon icon="person-circle" font-scale="1.2" class="me-1"></b-icon>
-                  <span>{{ user && user.name ? user.name : 'Akun' }}</span>
-                  <b-icon icon="chevron-down" font-scale="0.8" class="ms-1"></b-icon>
-                </template>
+        <div class="right">
+          <template v-if="isAuthenticated">
+            <b-dropdown right no-caret variant="link" class="user-dropdown-topbar" toggle-class="topbar-dropdown-toggle">
+              <template #button-content>
+                <b-icon icon="person-circle" font-scale="1.2" class="me-1"></b-icon>
+                <span class="text-white">{{ user && user.name ? user.name : 'Akun' }}</span>
+                <b-icon icon="chevron-down" font-scale="0.8" class="ms-1"></b-icon>
+              </template>
                 <b-dropdown-item :to="{ name: 'Profile' }" class="topbar-dropdown-item">
                   <b-icon icon="gear" class="me-2 text-primary"></b-icon> Profil Saya
                 </b-dropdown-item>
@@ -101,9 +101,9 @@
             </b-nav-item>
 
             <!-- Mobile Auth (hanya untuk mobile karena topbar hidden di mobile) -->
-            <div class="d-md-none">
+            <div class="d-md-none topbar-inner">
               <template v-if="isAuthenticated">
-                <b-nav-item-dropdown right no-caret class="user-dropdown" toggle-class="p-1">
+                <b-nav-item-dropdown right no-caret class="user-dropdown-topbar" toggle-class="p-1" menu-class="elevated-dropdown">
                   <template #button-content>
                     <b-icon icon="person-circle" font-scale="1.4" class="text-white"></b-icon>
                   </template>
@@ -133,28 +133,30 @@
         </div>
 
         <!-- Search & Cart (mobile) -->
-        <div class="w-100 d-lg-none px-3 pb-2 d-flex align-items-center gap-3">
-          <b-form @submit.prevent="handleSearch" class="flex-grow-1">
-            <b-input-group class="rounded-pill shadow-sm">
-              <b-form-input v-model="searchQuery" placeholder="Cari photobook…" class="px-4 py-2 border-0" />
-              <b-input-group-append>
-                <b-button type="submit" variant="primary" class="px-3 rounded-pill">
-                  <b-icon icon="search"></b-icon>
-                </b-button>
-              </b-input-group-append>
-            </b-input-group>
-          </b-form>
-          <!-- Cart (Mobile) -->
-          <b-link :to="{ name: 'Cart' }" class="position-relative text-white hover-white flex-shrink-0">
-            <b-icon icon="cart" font-scale="1.3" class="transition-scale"></b-icon>
-            <b-badge
-              v-if="cartItemCount > 0"
-              variant="danger"
-              pill
-              class="position-absolute top-0 start-100 translate-middle px-2"
-              style="font-size:.7rem; min-width:18px;"
-            >{{ cartItemCount }}</b-badge>
-          </b-link>
+        <div class="w-100 d-lg-none px-3 pb-2">
+          <div class="d-flex align-items-center gap-3">
+            <b-form @submit.prevent="handleSearch" class="flex-grow-1 mb-0">
+              <b-input-group class="rounded-pill shadow-sm">
+                <b-form-input v-model="searchQuery" placeholder="Cari photobook…" class="px-4 py-2 border-0" />
+                <b-input-group-append>
+                  <b-button type="submit" variant="primary" class="px-3 rounded-pill">
+                    <b-icon icon="search"></b-icon>
+                  </b-button>
+                </b-input-group-append>
+              </b-input-group>
+            </b-form>
+            <!-- Cart (Mobile) -->
+            <b-link :to="{ name: 'Cart' }" class="position-relative text-white hover-white d-inline-block mobile-cart">
+              <b-icon icon="cart" font-scale="1.3" class="transition-scale"></b-icon>
+              <b-badge
+                v-if="cartItemCount > 0"
+                variant="danger"
+                pill
+                class="position-absolute top-0 start-100 translate-middle px-2"
+                style="font-size:.7rem; min-width:18px;"
+              >{{ cartItemCount }}</b-badge>
+            </b-link>
+          </div>
         </div>
       </b-navbar>
     </div>
@@ -439,6 +441,53 @@
 }
 
 /* ========================
+   MOBILE CART ADJUSTMENT
+   ======================== */
+@media (max-width: 991.98px) {
+  .mobile-cart {
+    margin-left: -10px; /* Geser cart sedikit ke kiri */
+    z-index: 1040; /* Pastikan cart di atas tombol search */
+    position: relative; /* Pastikan z-index berfungsi */
+  }
+  
+  /* Margin antara search dan cart */
+  .d-lg-none .d-flex {
+    gap: 1.5rem !important;
+  }
+  
+  /* Mengurangi ukuran form search agar mengecil */
+  .d-lg-none .flex-grow-1 {
+    flex-grow: 1 !important;
+    flex-shrink: 1 !important;
+    min-width: 0 !important;
+  }
+  
+  /* Menyesuaikan ukuran input search */
+  .d-lg-none .form-control {
+    padding: 0.5rem 1rem !important;
+    font-size: 0.95rem !important;
+  }
+  
+  /* Menyesuaikan ukuran tombol search */
+  .d-lg-none .btn {
+    padding: 0.5rem 1rem !important;
+  }
+  
+  /* Memastikan cart tidak tumpang tindih dengan tombol search */
+  .mobile-cart {
+    margin-left: 0; /* Hapus margin kiri negatif */
+    z-index: 1040;
+    position: relative;
+  }
+  
+  /* Menambah jarak antara search dan cart */
+  .d-lg-none .d-flex {
+    gap: 1rem !important;
+    justify-content: space-between !important;
+  }
+}
+
+/* ========================
    HINDARI CLIPPING DARI PARENT
    ======================== */
 .navbar-wrapper {
@@ -450,6 +499,17 @@
 /* Jika ada transform atau will-change yang bikin stacking context */
 :deep(.dropdown-menu) {
   transform: translate3d(0, 0, 0) !important;
+}
+
+/* Memastikan dropdown profil muncul di atas elemen lain */
+.user-dropdown {
+  position: relative;
+  z-index: 1040;
+}
+
+:deep(.user-dropdown .dropdown-menu) {
+  z-index: 1040 !important;
+  position: absolute !important;
 }
   </style>
 
