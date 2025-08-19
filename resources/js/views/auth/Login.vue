@@ -1,5 +1,6 @@
 <template>
   <auth-layout>
+    <p class="text-muted small mb-0 text-center">Masuk untuk melanjutkan</p>
     <div class="login-form">
       <b-alert v-if="error" variant="danger" show class="mb-3">
         {{ error }}

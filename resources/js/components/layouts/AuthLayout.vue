@@ -9,7 +9,6 @@
                 <b-icon icon="book" variant="primary" class="mr-1"></b-icon>
                 Shabat Printing Photobook.
               </h3>
-              <p class="text-muted small mb-0">Masuk untuk melanjutkan</p>
             </b-card-header>
 
             <b-card-body>

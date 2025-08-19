@@ -154,9 +154,12 @@
               <!-- Meta row -->
               <div class="prod-meta">
                 <span v-if="product.total_sold > 0" class="sold">Terjual {{ formatCurrency(product.total_sold) }}</span>
+                <span v-else>-</span>
                 <span v-if="product.templates && product.templates.length > 0" class="tmpl">
-                  {{ product.templates.length }} tpl
+                  {{ product.templates.length }} template
                 </span>
+                
+                
               </div>
 
               <b-button
