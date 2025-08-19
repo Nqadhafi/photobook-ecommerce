@@ -79,8 +79,10 @@ export default {
     },
     getTemplateImage(template) {
       if (template.sample_image) {
-        if (template.sample_image.startsWith('http')) return template.sample_image;
-        return template.sample_image;
+        if (template.sample_image.startsWith('http')){
+          return template.sample_image;
+        } 
+        return '/storage/' + template.sample_image;
       }
       return 'https://www.aaronfaber.com/wp-content/uploads/2017/03/product-placeholder-wp.jpg';
     },

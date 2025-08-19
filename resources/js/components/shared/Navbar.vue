@@ -4,14 +4,14 @@
     <div class="topbar d-none d-md-block">
       <div class="topbar-inner">
         <div class="left">
-          <b-link :to="{ name: 'Home' }" class="link">Main Website</b-link>
+          <b-link :to="{ name: 'Home' }" class="link">Website utama</b-link>
           <span class="divider">|</span>
           <span class="link">Ikuti kami</span>
-          <a href="https://instagram.com" target="_blank" rel="noopener" class="icon-link" aria-label="Instagram">
+          <a href="https://www.instagram.com/shabat_printing/" target="_blank" rel="noopener" class="icon-link" aria-label="Instagram">
             <b-icon icon="instagram"></b-icon>
           </a>
-          <a href="https://tiktok.com" target="_blank" rel="noopener" class="icon-link" aria-label="TikTok">
-            <b-icon icon="music-note"></b-icon>
+          <a href="https://www.tiktok.com/@shabatprinting" target="_blank" rel="noopener" class="icon-link" aria-label="TikTok">
+            <b-icon icon="tiktok"></b-icon>
           </a>
           <span class="divider">|</span>
           <b-link :to="{ name: 'Help' }" class="link">Bantuan</b-link>
@@ -20,15 +20,18 @@
         <!-- Auth Section di Topbar -->
         <div class="right">
           <template v-if="isAuthenticated">
-            <b-dropdown right no-caret variant="link" class="user-dropdown-topbar" toggle-class="topbar-dropdown-toggle">
+            <b-dropdown right no-caret variant="white" class="user-dropdown-topbar" toggle-class="topbar-dropdown-toggle">
               <template #button-content>
-                <b-icon icon="person-circle" font-scale="1.2" class="me-1"></b-icon>
+                <b-icon icon="person-circle" font-scale="1.2" class="me-1" variant="white"></b-icon>
                 <span class="text-white">{{ user && user.name ? user.name : 'Akun' }}</span>
-                <b-icon icon="chevron-down" font-scale="0.8" class="ms-1"></b-icon>
+                <b-icon icon="chevron-down" font-scale="0.8" class="ms-1" variant="white"></b-icon>
               </template>
-              <b-dropdown-item :to="{ name: 'Profile' }" class="topbar-dropdown-item">
-                <b-icon icon="gear" class="me-2 text-primary"></b-icon> Profil Saya
-              </b-dropdown-item>
+                <b-dropdown-item :to="{ name: 'Dashboard' }">
+                  <b-icon icon="gear" class="me-2 text-primary"></b-icon> Dashboard
+                </b-dropdown-item>
+                <b-dropdown-item :to="{ name: 'Profile' }">
+                  <b-icon icon="person-circle" class="me-2 text-primary"></b-icon> Profil Saya
+                </b-dropdown-item>
               <b-dropdown-item :to="{ name: 'Orders' }" class="topbar-dropdown-item">
                 <b-icon icon="list" class="me-2 text-success"></b-icon> Riwayat Pesanan
               </b-dropdown-item>
@@ -55,15 +58,15 @@
       toggleable="lg"
       type="dark"
       variant="white"
-      class="mainbar position-relative px-3 py-2 border-bottom border-light shadow-sm"
+      class="mainbar position-relative px-3 py-2 pb-4"
       fixed="top"
     >
-      <div class="navbar-gradient"></div>
+      <!-- <div class="navbar-gradient"></div> -->
 
       <div class="container-fluid d-flex align-items-center justify-content-between px-2 px-lg-3 topbar-inner">
         <!-- Brand -->
         <b-navbar-brand :to="{ name: 'Home' }" class="d-flex align-items-center z-2">
-          <img src="../assets/logo.svg" alt="Photobook Studio" height="36" />
+          <img src="../../components/assets/white-logo.png" alt="Photobook Studio" height="36" />
         </b-navbar-brand>
 
         <!-- Search (desktop) -->
@@ -90,9 +93,9 @@
         <b-nav-item
           :to="{ name: 'Cart' }"
           class="position-relative pr-2 mr-5 text-white hover-white d-none d-lg-block"
-          active-class="text-light"
+          active-class="text-white"
         >
-          <b-icon icon="cart" font-scale="1.3" class="transition-scale"></b-icon>
+          <b-icon icon="cart" font-scale="1.3" class="transition-scale" variant="white"></b-icon>
           <b-badge
             v-if="cartItemCount > 0"
             variant="danger"
@@ -121,8 +124,11 @@
                 <template #button-content>
                   <b-icon icon="person-circle" font-scale="1.4" class="text-white"></b-icon>
                 </template>
+                <b-dropdown-item :to="{ name: 'Dashboard' }">
+                  <b-icon icon="gear" class="me-2 text-primary"></b-icon> Dashboard
+                </b-dropdown-item>
                 <b-dropdown-item :to="{ name: 'Profile' }">
-                  <b-icon icon="gear" class="me-2 text-primary"></b-icon> Profil Saya
+                  <b-icon icon="person-circle" class="me-2 text-primary"></b-icon> Profil Saya
                 </b-dropdown-item>
                 <b-dropdown-item :to="{ name: 'Orders' }">
                   <b-icon icon="list" class="me-2 text-success"></b-icon> Riwayat Pesanan
@@ -157,7 +163,7 @@
       </div>
 
       <!-- Search & Cart (mobile) -->
-      <div class="w-100 d-lg-none px-3 pb-2">
+      <div class="w-100 d-lg-none px-3 py-2">
         <div class="d-flex align-items-center gap-3">
           <b-form @submit.prevent="handleSearch" class="flex-grow-1 mb-0">
             <b-input-group class="rounded-pill shadow-sm">
@@ -171,7 +177,7 @@
           </b-form>
           <!-- Cart (Mobile) -->
           <b-link :to="{ name: 'Cart' }" class="position-relative text-white hover-white d-inline-block mobile-cart">
-            <b-icon icon="cart" font-scale="1.3" class="transition-scale"></b-icon>
+            <b-icon icon="cart" font-scale="1.3" class="transition-scale" variant="white"></b-icon>
             <b-badge
               v-if="cartItemCount > 0"
               variant="danger"
@@ -283,7 +289,8 @@ export default {
    TOPBAR (desktop)
    ======================== */
 .topbar {
-  background: linear-gradient(90deg, #007bff, #17a2b8);
+ background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, var(--hero-grad-a, #0ea5e9) 0%, var(--hero-grad-b, #3b82f6) 100%);
   color: #fff;
   font-size: .875rem;
   z-index: 1035;
@@ -371,14 +378,16 @@ export default {
    ======================== */
 .mainbar {
   z-index: 1030;
-  background: linear-gradient(90deg, #007bff, #17a2b8);
+ background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, var(--hero-grad-a, #0ea5e9) 0%, var(--hero-grad-b, #3b82f6) 100%);
   border-bottom: none;
 }
 .navbar-gradient {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, #007bff, #17a2b8);
+ background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, var(--hero-grad-a, #0ea5e9) 0%, var(--hero-grad-b, #3b82f6) 100%);
   z-index: -1;
   pointer-events: none;
 }

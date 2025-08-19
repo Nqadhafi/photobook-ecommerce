@@ -201,8 +201,10 @@ export default {
     formatCurrency(amount) { return new Intl.NumberFormat('id-ID').format(amount); },
     getProductImage(product) {
       if (product.thumbnail) {
-        if (product.thumbnail.startsWith('http')) return product.thumbnail;
-        return product.thumbnail;
+        if (product.thumbnail.startsWith('http')){
+          return product.thumbnail;
+        }
+        return '/storage/' + product.thumbnail;
       }
       return 'https://www.aaronfaber.com/wp-content/uploads/2017/03/product-placeholder-wp.jpg';
     },

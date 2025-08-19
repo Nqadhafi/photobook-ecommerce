@@ -1,6 +1,7 @@
 <!-- resources/js/views/dashboard/Dashboard.vue -->
 <template>
   <app-layout>
+    <b-container>
     <b-row>
       <b-col>
         <h1>Welcome, {{ userName }}!</h1>
@@ -78,6 +79,7 @@
         </b-card>
       </b-col>
     </b-row>
+    </b-container>
   </app-layout>
 </template>
 

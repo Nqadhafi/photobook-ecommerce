@@ -1,6 +1,6 @@
 <!-- resources/js/components/Footer.vue -->
 <template>
-  <footer class="bg-dark text-white mt-5 py-4">
+  <footer class="bg-dark text-white  py-5">
     <b-container>
       <b-row>
         <!-- Informasi Perusahaan -->
@@ -34,9 +34,9 @@
         <b-col md="4">
           <h5>Contact Us</h5>
           <ul class="list-unstyled text-muted small">
-            <li class="mb-2"><b-icon icon="geo-alt" class="mr-2"></b-icon> Jl. Contoh Alamat No. 123, Kota</li>
-            <li class="mb-2"><b-icon icon="telephone" class="mr-2"></b-icon> +62 812 3456 7890</li>
-            <li class="mb-2"><b-icon icon="envelope" class="mr-2"></b-icon> email@photobookapp.com</li>
+            <li class="mb-2"><b-icon icon="geo-alt" class="mr-2"></b-icon> JL. Perintis Kemerdekaan No.20 C-F, Kel.Sondakan, Kec.Laweyan, Kota Surakarta</li>
+            <li class="mb-2"><b-icon icon="telephone" class="mr-2"></b-icon> +62 813 8099 9999</li>
+            <li class="mb-2"><b-icon icon="envelope" class="mr-2"></b-icon> shabatwarna@gmail.com</li>
           </ul>
         </b-col>
       </b-row>
@@ -64,7 +64,7 @@ export default {
   name: 'AppFooter',
   data() {
     return {
-      appName: process.env.MIX_APP_NAME || 'Photobook App', // Ambil dari .env
+      appName: 'Shabat Printing Photobook', // Ambil dari .env
     }
   },
   computed: {
