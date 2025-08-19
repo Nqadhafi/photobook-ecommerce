@@ -7,7 +7,7 @@
             <b-card-header class="text-center bg-white border-0 pb-0">
               <h3 class="mb-2 brand-title">
                 <b-icon icon="book" variant="primary" class="mr-1"></b-icon>
-                Photobook Studio
+                Shabat Printing Photobook.
               </h3>
               <p class="text-muted small mb-0">Masuk untuk melanjutkan</p>
             </b-card-header>
@@ -18,7 +18,7 @@
 
             <b-card-footer class="text-center bg-white border-0 pt-0">
               <small class="text-muted">
-                &copy; {{ new Date().getFullYear() }} Photobook Studio
+                &copy; {{ new Date().getFullYear() }} Shabat Printing Photobook.
               </small>
             </b-card-footer>
           </b-card>
