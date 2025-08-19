@@ -32,8 +32,8 @@ setLogoutCallback(() => {
 
 // Hanya ambil CSRF cookie
 axios.get('/sanctum/csrf-cookie')
-  .then(() => console.log('CSRF cookie loaded'))
-  .catch(err => console.warn('Failed to load CSRF cookie', err));
+  // .then(() => console.log('CSRF cookie loaded'))
+  // .catch(err => console.warn('Failed to load CSRF cookie', err));
 
 // Mount Vue tanpa menunggu fetchUser
 new Vue({
