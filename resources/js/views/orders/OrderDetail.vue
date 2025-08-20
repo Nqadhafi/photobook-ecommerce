@@ -64,6 +64,29 @@
               </b-col>
             </b-row>
 
+                      <!-- PICKUP CODE (BARU) -->
+            <div v-if="order.pickup_code" class="mt-3">
+              <label class="small text-muted d-block mb-2">
+                <b-icon icon="qr-code" class="mr-1"></b-icon>
+                Pickup Code
+              </label>
+              <b-input-group size="sm" class="pickup-code-group">
+                <b-form-input
+                  :value="order.pickup_code"
+                  readonly
+                  class="pickup-code-input"
+                />
+                <b-input-group-append>
+                  <b-button variant="outline-primary" @click="copyPickupCode" class="pickup-copy-btn">
+                    <b-icon icon="clipboard" class="mr-1"></b-icon> Copy
+                  </b-button>
+                </b-input-group-append>
+              </b-input-group>
+              <small class="text-muted d-block mt-1">
+                Tunjukkan atau ketik kode ini saat pengambilan pesanan.
+              </small>
+            </div>
+            <!-- /PICKUP CODE -->
             <hr>
 
             <!-- Items -->
@@ -453,6 +476,34 @@ export default {
         notification = { title:'Payment Error', message: result.status_message || 'Payment failed. Try again.', type:'danger' };
       }
       if (notification.title) this.$store.dispatch('showNotification', notification);
+    },
+    async copyPickupCode() {
+      if (!this.order || !this.order.pickup_code) return;
+      const text = this.order.pickup_code.toString();
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          // fallback untuk browser lama
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        this.$store.dispatch('showNotification', {
+          title: 'Copied',
+          message: 'Pickup code copied to clipboard.',
+          type: 'success'
+        });
+      } catch (e) {
+        this.$store.dispatch('showNotification', {
+          title: 'Copy Failed',
+          message: 'Unable to copy pickup code. Please copy manually.',
+          type: 'danger'
+        });
+      }
     },
 
     getStatusVariant(status) {
