@@ -2,205 +2,243 @@
 <template>
   <app-layout>
     <b-container>
-      <!-- Loading State -->
+      <!-- Loading -->
       <b-row v-if="loading">
         <b-col cols="12" class="text-center py-5">
-          <b-spinner variant="primary" style="width: 3rem; height: 3rem;"></b-spinner>
+          <b-spinner variant="primary" style="width:3rem;height:3rem;"></b-spinner>
           <p class="mt-3">Loading order details...</p>
         </b-col>
       </b-row>
-      <!-- Error State -->
+
+      <!-- Error -->
       <b-row v-else-if="error">
         <b-col cols="12">
           <b-alert variant="danger" show>
-            <h4><b-icon icon="exclamation-triangle"></b-icon> Error</h4>
-            <p>{{ error }}</p>
+            <h4 class="mb-2"><b-icon icon="exclamation-triangle"></b-icon> Error</h4>
+            <p class="mb-3">{{ error }}</p>
             <b-button variant="primary" :to="{ name: 'Orders' }" size="sm">
               <b-icon icon="arrow-left"></b-icon> Back to Orders
             </b-button>
           </b-alert>
         </b-col>
       </b-row>
-      <!-- Order Detail -->
+
+      <!-- Content -->
       <b-row v-else-if="order">
         <b-col cols="12">
           <b-breadcrumb :items="breadcrumbItems"></b-breadcrumb>
         </b-col>
+
+        <!-- LEFT -->
         <b-col lg="8">
-                    <!-- Order Timeline Component -->
-          <b-card class="mb-4">
-            <b-card-title>
-              <b-icon icon="kanban"></b-icon> Order Progress<span v-if="order">#{{ order.order_number }}</span>
+          <!-- Progress -->
+          <b-card class="border-0 shadow-sm mb-3">
+            <b-card-title class="mb-2">
+              <b-icon icon="kanban"></b-icon> Order Progress
+              <span class="muted ml-2">#{{ order.order_number }}</span>
             </b-card-title>
-            <OrderTimeline/>
+            <OrderTimeline />
           </b-card>
-          <!-- Order Summary Card -->
-          <!-- --- PERUBAHAN: Tampilkan breakdown biaya di card ini --- -->
-          <b-card class="mb-4">
-            <b-card-title>
-              <b-icon icon="receipt"></b-icon> Order Summary #{{ order.order_number }}
+
+          <!-- Order Summary (items + breakdown) -->
+          <b-card class="border-0 shadow-sm mb-3">
+            <b-card-title class="mb-2 d-flex align-items-center">
+              <div>
+                <b-icon icon="receipt"></b-icon> Order Summary
+                <span class="muted ml-2">#{{ order.order_number }}</span>
+              </div>
               <b-badge :variant="getStatusVariant(order.status)" class="ml-2">
                 {{ formatStatus(order.status) }}
               </b-badge>
             </b-card-title>
-            <b-row>
+
+            <b-row class="mb-2">
               <b-col md="6">
-                <p class="mb-1"><strong>Date:</strong> {{ formatDate(order.created_at) }}</p>
-                <!-- <p class="mb-1"><strong>Total Amount:</strong> <strong>{{ formatCurrency(order.total_amount) }}</strong></p> -->
+                <div class="small text-muted">Date</div>
+                <div class="font-weight-600">{{ formatDate(order.created_at) }}</div>
               </b-col>
               <b-col md="6">
-                <p class="mb-1"><strong>Name:</strong> {{ order.customer_name }}</p>
-                <p class="mb-1"><strong>Email:</strong> {{ order.customer_email }}</p>
-                <!-- <p class="mb-1"><strong>Phone:</strong> {{ order.customer_phone }}</p> -->
+                <div class="small text-muted">Customer</div>
+                <div class="font-weight-600">{{ order.customer_name }}</div>
+                <div class="muted small">{{ order.customer_email }}</div>
               </b-col>
             </b-row>
-            <!-- --- Tambahkan breakdown biaya --- -->
-             <hr>
-            <b-list-group flush>
-                          <b-list-group flush>
-              <b-list-group-item v-for="item in order.items" :key="item.id">
-                <b-row class="align-items-center">
-                  <b-col md="2" class="text-center mb-2 mb-md-0">
+
+            <hr>
+
+            <!-- Items -->
+            <div class="order-list">
+              <div
+                v-for="item in order.items"
+                :key="item.id"
+                class="order-item-card"
+              >
+                <div class="order-item">
+                  <!-- image -->
+                  <div class="thumb-wrap">
                     <b-img
                       :src="getProductImage(item.product)"
                       rounded
-                      fluid
-                      class="product-thumbnail"
+                      class="thumb"
                       @error="onItemImageError"
-                    ></b-img>
-                  </b-col>
-                  <b-col md="6">
-                    <h6 class="mb-1">{{ item.product ? item.product.name : 'No Product' }}</h6>
-                    <!-- --- PERUBAHAN: Tampilkan informasi slot foto --- -->
-                    <p class="text-muted small mb-0">
-                      Template: {{ item.template ? item.template.name : 'N/A' }}<br>
-                      Qty: {{ item.quantity }} &times; {{ formatCurrency(item.price) }}
-                      <span v-if="!item.design_same">(Different designs)</span><br>
-                      <span v-if="item.template && item.template.layout_data && item.template.layout_data.photo_slots !== undefined">
-                        <b-icon icon="images" class="mr-1"></b-icon>
-                        Required Photos:
-                        <strong>
-                          {{ getTotalPhotoSlotsForItem(item) }}
-                          ({{ item.template.layout_data.photo_slots }} per book)
-                        </strong>
+                    />
+                  </div>
+
+                  <!-- info -->
+                  <div class="info-wrap">
+                    <div class="title clamp-2">
+                      {{ item.product ? item.product.name : 'No Product' }}
+                    </div>
+
+                    <div class="meta">
+                      <span class="badge-template">{{ item.template ? item.template.name : 'N/A' }}</span>
+                      <span class="divider">•</span>
+                      <span class="muted">
+                        Qty: {{ item.quantity }}
+                        <span class="divider">•</span>
+                        {{ formatPrice(item.price) }} / item
                       </span>
-                      <span v-else-if="item.template">
-                        <b-icon icon="images" class="mr-1"></b-icon>
-                        Required Photos: <strong>N/A</strong>
-                      </span>
-                    </p>
-                     <!-- --- AKHIR PERUBAHAN --- -->
-                  </b-col>
-                  <b-col md="4" class="text-md-right">
-                    <strong> {{ formatCurrency(item.quantity * item.price) }}</strong>
-                  </b-col>
-                </b-row>
-              </b-list-group-item>
-            </b-list-group>
-              <b-list-group-item class="d-flex justify-content-between px-0">
+                    </div>
+
+                    <!-- photo slots info (jika ada) -->
+                    <div class="slots" v-if="item.template && item.template.layout_data && item.template.layout_data.photo_slots !== undefined">
+                      <b-icon icon="images" class="mr-1"></b-icon>
+                      Required Photos:
+                      <strong>
+                        {{ getTotalPhotoSlotsForItem(item) }}
+                        ({{ item.template.layout_data.photo_slots }} per book)
+                      </strong>
+                    </div>
+
+                    <div class="line-total">
+                      <span>Line Total</span>
+                      <strong>{{ formatCurrency(item.quantity * item.price) }}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Breakdown -->
+            <b-list-group flush class="summary-list mt-2">
+              <b-list-group-item class="d-flex justify-content-between align-items-center">
                 <span>Subtotal</span>
-                <strong> {{ formatCurrency(order.sub_total_amount) }}</strong>
+                <strong>{{ formatCurrency(order.sub_total_amount) }}</strong>
               </b-list-group-item>
-              <b-list-group-item v-if="order.discount_amount && order.discount_amount > 0" class="d-flex justify-content-between px-0 text-success">
+
+              <b-list-group-item
+                v-if="order.discount_amount && order.discount_amount > 0"
+                class="d-flex justify-content-between align-items-center text-success"
+              >
                 <span>
-                    Discount
-                    <span v-if="order.coupons && order.coupons.length > 0">
-                        ({{ order.coupons.map(c => c.code).join(', ') }})
-                    </span>
+                  Discount
+                  <span v-if="order.coupons && order.coupons.length">
+                    ({{ order.coupons.map(c => c.code).join(', ') }})
+                  </span>
                 </span>
-                <strong>-  {{ formatCurrency(order.discount_amount) }}</strong>
+                <strong>- {{ formatCurrency(order.discount_amount) }}</strong>
               </b-list-group-item>
-              <b-list-group-item class="d-flex justify-content-between px-0 bg-light">
+
+              <b-list-group-item class="d-flex justify-content-between align-items-center bg-light">
                 <h5 class="mb-0">Total</h5>
-                <h5 class="mb-0 text-primary"> {{ formatCurrency(order.total_amount) }}</h5>
+                <h5 class="mb-0 text-primary">{{ formatCurrency(order.total_amount) }}</h5>
               </b-list-group-item>
             </b-list-group>
-            <!-- --- Akhir breakdown biaya --- -->
           </b-card>
-          <!-- --- AKHIR PERUBAHAN --- -->
 
-
-          <!-- Customer Address -->
-          <b-card class="mb-4">
-            <b-card-title><b-icon icon="geo-alt"></b-icon> Shipping Address</b-card-title>
+          <!-- Shipping Address -->
+          <b-card class="border-0 shadow-sm mb-3">
+            <b-card-title class="mb-2">
+              <b-icon icon="geo-alt"></b-icon> Shipping Address
+            </b-card-title>
             <address class="mb-0">
               <strong>{{ order.customer_name }}</strong><br>
               {{ order.customer_address }}<br>
-              {{ order.customer_city }}, {{ order.customer_postal_code }}<br>
-              <!-- <strong>Phone:</strong> {{ order.customer_phone }} -->
+              {{ order.customer_city }}, {{ order.customer_postal_code }}
             </address>
           </b-card>
         </b-col>
+
+        <!-- RIGHT: Payment & Actions (visible on ALL sizes) -->
         <b-col lg="4">
-          <!-- Payment & Actions Card -->
-          <b-card class="sticky-top" style="top: 20px;">
-            <b-card-title><b-icon icon="credit-card"></b-icon> Payment & Actions</b-card-title>
-            <b-alert v-if="paymentError" variant="danger" dismissible @dismissed="paymentError = ''" class="mb-3">
+          <b-card class="border-0 shadow-sm sticky-lg mb-mobile-6">
+            <b-card-title class="mb-2">
+              <b-icon icon="credit-card"></b-icon> Payment & Actions
+            </b-card-title>
+
+            <b-alert
+              v-if="paymentError"
+              variant="danger"
+              dismissible
+              @dismissed="paymentError = ''"
+              class="mb-3"
+            >
               {{ paymentError }}
             </b-alert>
-              <!-- --- Tombol Cancel Order --- -->
-  <hr>
-<b-button
-  v-if="order && order.status === 'pending'"
-  variant="outline-danger"
-  block
-  size="sm"
-  @click="cancelOrder"
-  :disabled="isCancelling"
-  class="mb-2"
->
- <b-spinner v-if="isCancelling" small></b-spinner>
- {{ isCancelling ? 'Cancelling...' : 'Cancel Order' }}
-</b-button>
-  <!-- -------------------------- -->
-            <!-- Payment Instructions/Info for Pending Orders -->
-            <div v-if="order.status === 'pending' && snapToken">
+
+            <!-- Cancel -->
+            <b-button
+              v-if="order.status === 'pending'"
+              variant="outline-danger"
+              block
+              size="sm"
+              class="mb-2"
+              @click="cancelOrder"
+              :disabled="isCancelling"
+            >
+              <b-spinner v-if="isCancelling" small></b-spinner>
+              <template v-else>Cancel Order</template>
+            </b-button>
+
+            <!-- Pending payment -->
+            <div v-if="order.status === 'pending'">
               <p class="text-muted small mb-2">Complete your payment to proceed with your order.</p>
               <b-button
                 variant="success"
                 size="lg"
                 block
-                @click="initiatePayment"
-                :disabled="isPaying"
                 class="mb-2"
+                @click="initiatePayment"
+                :disabled="isPaying || !snapToken"
               >
                 <b-spinner v-if="isPaying" small></b-spinner>
-                {{ isPaying ? 'Opening Payment...' : 'Pay Now ( ' + formatCurrency(order.total_amount) + ')' }}
+                <template v-else>
+                  Pay Now ({{ formatCurrency(order.total_amount) }})
+                </template>
               </b-button>
-              <p class="text-muted small mb-0"><b-icon icon="info-circle"></b-icon> You will be redirected to Midtrans secure payment page.</p>
-            </div>
-            <div v-else-if="order.status === 'pending' && !snapToken">
-              <b-alert variant="warning" show class="mb-3">
-                Payment information is not available. Please contact support or try refreshing the page.
+              <b-alert v-if="!snapToken" variant="warning" show class="mb-2">
+                Payment information is not available. Please refresh or contact support.
               </b-alert>
+              <p class="text-muted small mb-0">
+                <b-icon icon="info-circle"></b-icon>
+                You will be redirected to Midtrans secure payment page.
+              </p>
             </div>
-            <!-- --- PERUBAHAN: Pesan untuk status 'paid' (menunggu folder) --- -->
+
+            <!-- Paid: waiting folder -->
             <div v-else-if="order.status === 'paid'">
               <b-alert variant="info" show class="mb-3">
-                <b-icon icon="hourglass-split"></b-icon> <strong>Payment Successful!</strong><br>
+                <b-icon icon="hourglass-split"></b-icon>
+                <strong>Payment Successful!</strong><br>
                 <small class="text-muted">Paid on {{ formatDate(order.paid_at) }}</small>
               </b-alert>
               <p class="mb-2">
                 <b-icon icon="cloud-download"></b-icon>
-                Thank you for your payment. We are preparing your Google Drive folder for file uploads.
-                You will receive a notification and a WhatsApp message with the link once it's ready.
+                We are preparing your Google Drive folder for uploads. You will receive a notification/WhatsApp link soon.
               </p>
               <b-alert variant="warning" show class="small mb-0">
                 <b-icon icon="info-circle"></b-icon>
-                Please wait for the folder link. The "Upload Design Files" feature within the app is no longer used.
+                Please wait for the folder link. The in-app "Upload Design Files" is no longer used.
               </b-alert>
             </div>
-            <!-- --- AKHIR PERUBAHAN --- -->
-            <!-- --- PERUBAHAN: Pesan dan tombol untuk status 'file_upload' (folder siap) --- -->
+
+            <!-- File Upload ready -->
             <div v-else-if="order.status === 'file_upload'">
               <b-alert variant="success" show class="mb-3">
-                <b-icon icon="check-circle"></b-icon> <strong>Folder Ready!</strong><br>
-                <small class="text-muted">Status updated on {{ formatDate(order.updated_at) }} <!-- Asumsi ada updated_at --> </small>
+                <b-icon icon="check-circle"></b-icon>
+                <strong>Folder Ready!</strong><br>
+                <small class="text-muted">Updated on {{ formatDate(order.updated_at) }}</small>
               </b-alert>
-              <p class="mb-2">
-                <b-icon icon="folder"></b-icon>
-                Your Google Drive folder has been created successfully.
-              </p>
               <b-button
                 v-if="order.google_drive_folder_url"
                 :href="order.google_drive_folder_url"
@@ -215,28 +253,33 @@
                 <b-icon icon="exclamation-triangle"></b-icon> Folder link is missing. Please contact support.
               </b-alert>
               <p class="text-muted small mb-0">
-                Please upload your design files to the Google Drive folder. Our team will verify the files after you finish uploading.
+                Upload your design files to the Drive folder. Our team will verify after you finish uploading.
               </p>
             </div>
-            <!-- --- AKHIR PERUBAHAN --- -->
-            <!-- Message for Cancelled Orders -->
+
+            <!-- Cancelled -->
             <div v-else-if="order.status === 'cancelled'">
               <b-alert variant="danger" show class="mb-3">
-                <b-icon icon="x-circle"></b-icon> <strong>Order Cancelled</strong><br>
+                <b-icon icon="x-circle"></b-icon>
+                <strong>Order Cancelled</strong><br>
                 <small class="text-muted" v-if="order.cancelled_at">Cancelled on {{ formatDate(order.cancelled_at) }}</small>
               </b-alert>
-              <p class="mb-2">Your order has been cancelled. If you have any questions, please contact support.</p>
+              <p class="mb-0">If you have questions, please contact support.</p>
             </div>
-            <!-- Message for Other Statuses (e.g., processing, ready, completed) -->
+
+            <!-- Other statuses -->
             <div v-else>
               <b-alert :variant="getStatusVariant(order.status)" show class="mb-3">
                 <strong>{{ formatStatus(order.status) }}</strong>
               </b-alert>
-              <p class="mb-2">Your order is currently in the <strong>{{ formatStatus(order.status) }}</strong> status.</p>
-              <!-- Tambahkan aksi atau informasi spesifik untuk status lain jika diperlukan -->
+              <p class="mb-0">
+                Your order is currently in the <strong>{{ formatStatus(order.status) }}</strong> status.
+              </p>
             </div>
+
             <hr>
-            <!-- General Actions -->
+
+            <!-- Back -->
             <b-button
               variant="outline-primary"
               block
@@ -246,27 +289,56 @@
             >
               <b-icon icon="arrow-left"></b-icon> Back to Orders
             </b-button>
-            <!-- --- HAPUS: Tombol Upload Design Files lama --- -->
-            <!-- <b-button ...>Upload Design Files</b-button> -->
-            <!-- --- AKHIR HAPUS --- -->
-
           </b-card>
         </b-col>
       </b-row>
     </b-container>
+
+    <!-- MOBILE bottom bar (aksi cepat) -->
+    <div class="mobile-summary d-lg-none" v-if="order && !loading">
+      <div class="mobile-summary-inner">
+        <div class="left">
+          <div class="label" v-if="order.status==='pending'">Total</div>
+          <div class="value" v-if="order.status==='pending'">{{ formatCurrency(order.total_amount) }}</div>
+          <div class="label" v-else>Status</div>
+          <div class="value" v-else>{{ formatStatus(order.status) }}</div>
+          <div class="hint" v-if="order.status==='pending'">Free shipping • Tax included</div>
+        </div>
+
+        <!-- Pending: Pay Now -->
+        <b-button
+          v-if="order.status==='pending'"
+          variant="success"
+          class="btn-checkout"
+          :disabled="isPaying || !snapToken"
+          @click="initiatePayment"
+        >
+          <b-spinner v-if="isPaying" small></b-spinner>
+          <template v-else>Pay Now</template>
+        </b-button>
+
+        <!-- Not pending: Back -->
+        <b-button
+          v-else
+          variant="outline-primary"
+          class="btn-checkout"
+          :to="{ name: 'Orders' }"
+        >
+          Back
+        </b-button>
+      </div>
+    </div>
   </app-layout>
 </template>
+
 <script>
-// ... (imports tetap sama) ...
 import orderService from '../../services/orderService';
 import { loadScript } from '../../utils/helpers';
 import OrderTimeline from './OrderTimeline.vue';
 
 export default {
   name: 'OrderDetail',
-  components: {
-    OrderTimeline
-  },
+  components: { OrderTimeline },
   data() {
     return {
       order: null,
@@ -274,7 +346,6 @@ export default {
       error: null,
       paymentError: null,
       isCancelling: false,
-      cancelError: null,
       isPaying: false,
       snapToken: null
     };
@@ -286,50 +357,12 @@ export default {
         { text: 'Orders', to: { name: 'Orders' } },
         { text: `Order #${this.order ? this.order.order_number : '...'}`, active: true }
       ];
-    },
-    arePhotoSlotsDefinedForAllItems() {
-      if (!this.order || !this.order.items || this.order.items.length === 0) {
-        return false;
-      }
-
-      return this.order.items.every(item => {
-        return item.template &&
-               item.template.layout_data &&
-               item.template.layout_data.photo_slots !== undefined &&
-               item.template.layout_data.photo_slots !== null;
-      });
     }
   },
   async created() {
     await this.loadOrder();
   },
   methods: {
-    async cancelOrder() {
-      if (!this.order) return;
-      const confirmed = window.confirm(`Are you sure you want to cancel order #${this.order.order_number}? This action cannot be undone.`);
-      if (!confirmed) return;
-      this.isCancelling = true;
-      this.cancelError = null;
-      try {
-         await orderService.cancelOrder(this.order.id);
-         this.$store.dispatch('showNotification', {
-            title: 'Order Cancelled',
-            message: `Order #${this.order.order_number} has been cancelled.`,
-            type: 'success'
-         });
-         await this.loadOrder();
-      } catch (error) {
-         console.error('Failed to cancel order:', error);
-         this.cancelError = error.message || 'Failed to cancel order. Please try again.';
-         this.$store.dispatch('showNotification', {
-            title: 'Cancellation Failed',
-            message: this.cancelError,
-            type: 'danger'
-         });
-      } finally {
-         this.isCancelling = false;
-      }
-    },
     async loadOrder() {
       this.loading = true;
       this.error = null;
@@ -338,167 +371,241 @@ export default {
         const orderId = this.$route.params.id;
         const response = await orderService.getOrder(orderId);
         this.order = response.data;
-        // --- Pastikan data kupon di-load ---
-        // Backend perlu mengirim relasi 'coupons' saat getOrder
-        // Di controller getOrder, tambahkan: ->with(['items.product', 'items.template', 'payment', 'coupons'])
-        // ---
+
+        // butuh relasi: ->with(['items.product','items.template','payment','coupons'])
         if (this.order.snap_token) {
-            this.snapToken = this.order.snap_token;
+          this.snapToken = this.order.snap_token;
+        } else if (this.order.payment && this.order.payment.snap_token) {
+          this.snapToken = this.order.payment.snap_token;
         }
-        else if (this.order.payment && this.order.payment.snap_token) {
-            this.snapToken = this.order.payment.snap_token;
-        }
-      } catch (error) {
-        console.error('Failed to load order:', error);
-        this.error = error.message || 'Failed to load order details. Please try again.';
+      } catch (e) {
+        console.error('Failed to load order:', e);
+        this.error = e.message || 'Failed to load order details. Please try again.';
       } finally {
         this.loading = false;
       }
     },
+
+    async cancelOrder() {
+      if (!this.order) return;
+      const confirmed = window.confirm(`Are you sure you want to cancel order #${this.order.order_number}? This action cannot be undone.`);
+      if (!confirmed) return;
+
+      this.isCancelling = true;
+      try {
+        await orderService.cancelOrder(this.order.id);
+        this.$store.dispatch('showNotification', {
+          title: 'Order Cancelled',
+          message: `Order #${this.order.order_number} has been cancelled.`,
+          type: 'success'
+        });
+        await this.loadOrder();
+      } catch (e) {
+        console.error('Failed to cancel order:', e);
+        this.$store.dispatch('showNotification', {
+          title: 'Cancellation Failed',
+          message: e.message || 'Failed to cancel order. Please try again.',
+          type: 'danger'
+        });
+      } finally {
+        this.isCancelling = false;
+      }
+    },
+
     async initiatePayment() {
       if (!this.snapToken) {
-        this.paymentError = 'Payment token is missing. Please try refreshing the page or contact support.';
-        console.error('Snap token is missing for order:', this.order?.id);
+        this.paymentError = 'Payment token is missing. Please refresh or contact support.';
         return;
       }
       this.isPaying = true;
       this.paymentError = null;
       try {
         const clientKey = process.env.MIX_MIDTRANS_CLIENT_KEY;
-        if (!clientKey) {
-            throw new Error('MIDTRANS_CLIENT_KEY is not configured in .env file.');
-        }
+        if (!clientKey) throw new Error('MIDTRANS_CLIENT_KEY is not configured in .env');
+
         await loadScript('https://app.sandbox.midtrans.com/snap/snap.js', 'data-client-key', clientKey);
-        if (typeof window.snap === 'undefined') {
-            throw new Error('Failed to load Midtrans Snap.js. Please check your internet connection and try again.');
-        }
+        if (typeof window.snap === 'undefined') throw new Error('Failed to load Midtrans Snap.js.');
+
         window.snap.pay(this.snapToken, {
-            onSuccess: (result) => {
-                console.log('Payment Success:', result);
-                this.handlePaymentOutcome('success', result);
-            },
-            onPending: (result) => {
-                console.log('Payment Pending:', result);
-                this.handlePaymentOutcome('pending', result);
-            },
-            onError: (result) => {
-                console.error('Payment Error:', result);
-                this.handlePaymentOutcome('error', result);
-            },
-            onClose: () => {
-                console.log('Payment Popup Closed');
-                this.isPaying = false;
-                 this.loadOrder();
-            }
+          onSuccess: (result) => { this.handlePaymentOutcome('success', result); },
+          onPending: (result) => { this.handlePaymentOutcome('pending', result); },
+          onError:   (result) => { this.handlePaymentOutcome('error', result); },
+          onClose:   () => { this.isPaying = false; this.loadOrder(); }
         });
-      } catch (error) {
-        console.error('Failed to initiate Snap payment:', error);
-        this.paymentError = error.message || 'Failed to open payment page. Please try again.';
+      } catch (e) {
+        console.error('Snap init error:', e);
+        this.paymentError = e.message || 'Failed to open payment page.';
         this.isPaying = false;
       }
     },
+
     handlePaymentOutcome(outcome, result) {
-        this.isPaying = false;
-        let notification = { title: '', message: '', type: '' };
-        if (outcome === 'success') {
-            notification = {
-                title: 'Payment Successful',
-                message: 'Your payment has been processed successfully. Redirecting...',
-                type: 'success'
-            };
-            setTimeout(async () => {
-                await this.loadOrder();
-            }, 2000);
-        } else if (outcome === 'pending') {
-             notification = {
-                title: 'Payment Pending',
-                message: result.status_message || 'Your payment is being processed. We will notify you once it is confirmed.',
-                type: 'warning'
-            };
-            setTimeout(async () => {
-                await this.loadOrder();
-            }, 2000);
-        } else if (outcome === 'error') {
-             notification = {
-                title: 'Payment Error',
-                message: result.status_message || 'An error occurred during payment. Please try again or check your transaction history.',
-                type: 'danger'
-            };
-        }
-        if (notification.title) {
-            this.$store.dispatch('showNotification', notification);
-        }
+      this.isPaying = false;
+      let notification = { title:'', message:'', type:'' };
+
+      if (outcome === 'success') {
+        notification = { title:'Payment Successful', message:'Your payment has been processed. Refreshing…', type:'success' };
+        setTimeout(() => this.loadOrder(), 1200);
+      } else if (outcome === 'pending') {
+        notification = { title:'Payment Pending', message: result.status_message || 'Awaiting confirmation.', type:'warning' };
+        setTimeout(() => this.loadOrder(), 1200);
+      } else {
+        notification = { title:'Payment Error', message: result.status_message || 'Payment failed. Try again.', type:'danger' };
+      }
+      if (notification.title) this.$store.dispatch('showNotification', notification);
     },
+
     getStatusVariant(status) {
-      const statusMap = {
-        'pending': 'warning',
-        'paid': 'info',
-        'file_upload': 'success',
-        'processing': 'primary',
-        'ready': 'success',
-        'completed': 'success',
-        'cancelled': 'danger'
+      const map = {
+        pending: 'warning',
+        paid: 'info',
+        file_upload: 'success',
+        processing: 'primary',
+        ready: 'success',
+        completed: 'success',
+        cancelled: 'danger'
       };
-      return statusMap[status] || 'secondary';
+      return map[status] || 'secondary';
     },
     formatStatus(status) {
-       const statusLabels = {
-        'pending': 'Pending Payment',
-        'paid': 'Payment Received (Preparing Folder)',
-        'file_upload': 'Folder Ready for Upload',
-        'processing': 'In Production',
-        'ready': 'Ready for Pickup',
-        'completed': 'Completed',
-        'cancelled': 'Cancelled'
+      const map = {
+        pending: 'Pending Payment',
+        paid: 'Payment Received',
+        file_upload: 'Folder Ready for Upload',
+        processing: 'In Production',
+        ready: 'Ready for Pickup',
+        completed: 'Completed',
+        cancelled: 'Cancelled'
       };
-      return statusLabels[status] || status;
+      return map[status] || status;
     },
     formatDate(dateString) {
       if (!dateString) return 'N/A';
-      const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-      return new Date(dateString).toLocaleDateString('id-ID', options);
+      const opt = { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' };
+      return new Date(dateString).toLocaleDateString('id-ID', opt);
     },
     formatCurrency(amount) {
-      // --- PERUBAHAN: Gunakan Intl.NumberFormat untuk format IDR yang konsisten ---
-      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
-      // ---
+      return new Intl.NumberFormat('id-ID', { style:'currency', currency:'IDR', minimumFractionDigits:0 }).format(amount || 0);
+    },
+    formatPrice(amount) {
+      return new Intl.NumberFormat('id-ID', { minimumFractionDigits:0 }).format(amount || 0);
     },
     getProductImage(product) {
       if (product && product.thumbnail) {
-        if (product.thumbnail.startsWith('http')) {
-          return product.thumbnail;
-        }
-        return product.thumbnail;
+        if (product.thumbnail.startsWith('http')) return product.thumbnail;
+        return product.thumbnail.startsWith('/storage/')
+          ? product.thumbnail
+          : '/storage/' + product.thumbnail;
       }
       return 'https://www.aaronfaber.com/wp-content/uploads/2017/03/product-placeholder-wp.jpg';
     },
-    onItemImageError(event) {
-      event.target.src = 'https://www.aaronfaber.com/wp-content/uploads/2017/03/product-placeholder-wp.jpg';
+    onItemImageError(e) {
+      e.target.src = 'https://www.aaronfaber.com/wp-content/uploads/2017/03/product-placeholder-wp.jpg';
     },
     getTotalPhotoSlotsForItem(item) {
-      if (!item.template || !item.template.layout_data) {
-        return null;
-      }
-
-      const photoSlotsPerBook = item.template.layout_data.photo_slots;
-      if (photoSlotsPerBook === undefined || photoSlotsPerBook === null) {
-        return null;
-      }
-
-      const numberOfSets = item.design_same ? 1 : item.quantity;
-
-      return photoSlotsPerBook * numberOfSets;
-    },
+      if (!item.template || !item.template.layout_data) return null;
+      const perBook = item.template.layout_data.photo_slots;
+      if (perBook === undefined || perBook === null) return null;
+      const sets = item.design_same ? 1 : item.quantity;
+      return perBook * sets;
+    }
   }
 };
 </script>
+
 <style scoped>
-/* ... (styles tetap sama) ... */
-.product-thumbnail {
-  max-height: 80px;
+.muted { color:#64748b; }
+.font-weight-600 { font-weight:600; }
+
+/* Item list */
+.order-item-card {
+  border-radius: .9rem;
+  border: 1px solid #f1f5f9;
+  padding: .75rem;
+  margin-bottom: .75rem;
+}
+.order-item {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 12px;
+  align-items: stretch;
+}
+.thumb-wrap {
+  position: relative;
+  width: 100%;
+  padding-top: 100%; /* 1:1 */
+  overflow: hidden;
+  border-radius: .6rem;
+  background: #f8fafc;
+}
+.thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
-.sticky-top {
-  z-index: 1000;
+.info-wrap { display:flex; flex-direction:column; }
+.title { font-weight:700; font-size:1rem; margin-bottom:6px; }
+.clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.meta {
+  font-size:.85rem; color:#6b7280; margin-bottom:8px;
+  display:flex; align-items:center; flex-wrap:wrap; gap:6px;
+}
+.badge-template {
+  background:#e6f6ff; color:#0b74c7; border:1px solid rgba(14,165,233,.35);
+  border-radius:999px; padding:.18rem .5rem; font-size:.78rem; white-space:nowrap;
+}
+.divider { opacity:.6; }
+.slots { font-size:.85rem; color:#334155; margin-bottom:6px; }
+.line-total {
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:.95rem; color:#111827;
+}
+
+/* Summary list */
+.summary-list .list-group-item { border:none; }
+.summary-list .list-group-item + .list-group-item { border-top:1px solid #f1f5f9; }
+
+/* Sticky only on LG+ */
+.sticky-lg { position: static; }
+@media (min-width: 992px) {
+  .sticky-lg { position: sticky; top: 20px; }
+}
+
+/* Extra bottom space on mobile so card tidak ketutup bar */
+.mb-mobile-6 { }
+@media (max-width: 991.98px) {
+  .mb-mobile-6 { margin-bottom: 84px; }
+}
+
+/* Mobile bottom bar */
+.mobile-summary {
+  position: sticky;
+  bottom: 0; left: 0;
+  width: 100%;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  box-shadow: 0 -6px 20px rgba(2,132,199,.08);
+  z-index: 1040;
+}
+.mobile-summary-inner {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: .75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mobile-summary .left .label { font-size:.8rem; color:#6b7280; line-height:1.1; }
+.mobile-summary .left .value { font-weight:800; font-size:1.05rem; color:#0ea5e9; line-height:1.2; }
+.mobile-summary .left .hint { font-size:.75rem; color:#94a3b8; }
+.btn-checkout { border-radius:.6rem; padding:.6rem 1rem; font-weight:700; }
+
+/* Responsive tweak */
+@media (max-width: 991.98px) {
+  .order-item { grid-template-columns: 88px 1fr; }
+  .title { font-size:.98rem; }
 }
 </style>

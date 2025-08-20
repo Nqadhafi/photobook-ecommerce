@@ -12,7 +12,8 @@
       <!-- Title -->
       <b-row>
         <b-col cols="12">
-          <h2 class="mb-4">My Orders</h2>
+          <h2 class="mb-3">My Orders</h2>
+          <p class="muted mb-4">Track your orders and continue where you left off.</p>
         </b-col>
       </b-row>
 
@@ -28,8 +29,8 @@
       <b-row v-else-if="error">
         <b-col cols="12">
           <b-alert variant="danger" show>
-            <h4><b-icon icon="exclamation-triangle"></b-icon> Error</h4>
-            <p>{{ error }}</p>
+            <h4 class="mb-2"><b-icon icon="exclamation-triangle"></b-icon> Error</h4>
+            <p class="mb-3">{{ error }}</p>
             <b-button variant="primary" @click="loadOrders" size="sm">
               <b-icon icon="arrow-repeat"></b-icon> Retry
             </b-button>
@@ -40,10 +41,10 @@
       <!-- Empty -->
       <b-row v-else-if="orders.length === 0">
         <b-col cols="12">
-          <b-card class="text-center py-5">
-            <b-icon icon="inbox" font-scale="2" variant="secondary"></b-icon>
-            <h4 class="mt-3">No Orders Found</h4>
-            <p class="mb-4">You haven't placed any orders yet.</p>
+          <b-card class="text-center py-5 border-0 shadow-sm soft-card">
+            <b-icon icon="inbox" font-scale="2" class="text-primary-600"></b-icon>
+            <h4 class="mt-3 mb-2">No Orders Found</h4>
+            <p class="muted mb-4">You haven't placed any orders yet.</p>
             <b-button variant="primary" :to="{ name: 'Products' }">
               <b-icon icon="cart-plus"></b-icon> Start Shopping
             </b-button>
@@ -54,36 +55,58 @@
       <!-- Order List -->
       <b-row v-else>
         <b-col cols="12">
-          <b-card no-body>
-            <b-list-group flush>
-              <b-list-group-item 
-                v-for="order in orders" 
-                :key="order.id" 
-                :to="{ name: 'OrderDetail', params: { id: order.id } }"
-                class="order-list-item"
-              >
-                <b-row class="align-items-center">
-                  <b-col md="2">
-                    <strong>Order #{{ order.order_number }}</strong>
-                  </b-col>
-                  <b-col md="3">
-                    <b-badge :variant="getStatusVariant(order.status)">
-                      {{ formatStatus(order.status) }}
-                    </b-badge>
-                  </b-col>
-                  <b-col md="3">
-                    {{ formatDate(order.created_at) }}
-                  </b-col>
-                  <b-col md="3">
-                    <strong>Rp {{ formatCurrency(order.total_amount) }}</strong>
-                  </b-col>
-                  <b-col md="1" class="text-right">
-                    <b-icon icon="chevron-right" class="text-muted"></b-icon>
-                  </b-col>
-                </b-row>
-              </b-list-group-item>
-            </b-list-group>
-          </b-card>
+
+          <!-- Desktop header -->
+          <div class="order-header d-none d-md-grid">
+            <div>Order</div>
+            <div>Date</div>
+            <div>Status</div>
+            <div class="text-right">Total</div>
+            <div></div>
+          </div>
+
+          <!-- Rows -->
+          <div class="order-list">
+            <router-link
+              v-for="order in orders"
+              :key="order.id"
+              :to="{ name: 'OrderDetail', params: { id: order.id } }"
+              class="order-row"
+            >
+              <!-- Desktop columns -->
+              <div class="col-order d-none d-md-block">
+                <div class="order-no">#{{ order.order_number }}</div>
+              </div>
+              <div class="col-date d-none d-md-block">
+                <div class="date">{{ formatDate(order.created_at) }}</div>
+              </div>
+              <div class="col-status d-none d-md-block">
+                <span class="status-chip" :class="'status-' + (order.status || 'other')">
+                  {{ formatStatus(order.status) }}
+                </span>
+              </div>
+              <div class="col-total d-none d-md-block text-right">
+                <div class="total">{{ formatCurrency(order.total_amount) }}</div>
+              </div>
+              <div class="col-chevron d-none d-md-flex">
+                <b-icon icon="chevron-right" class="chev muted"></b-icon>
+              </div>
+
+              <!-- Mobile stacked card -->
+              <div class="mobile-card d-md-none">
+                <div class="top">
+                  <div class="order-no">#{{ order.order_number }}</div>
+                  <div class="total">{{ formatCurrency(order.total_amount) }}</div>
+                </div>
+                <div class="mid">
+                  <span class="status-chip" :class="'status-' + (order.status || 'other')">
+                    {{ formatStatus(order.status) }}
+                  </span>
+                  <div class="date">{{ formatDate(order.created_at) }}</div>
+                </div>
+              </div>
+            </router-link>
+          </div>
 
           <!-- Pagination -->
           <b-pagination
@@ -94,6 +117,8 @@
             @input="onPageChange"
             align="center"
             class="mt-4"
+            first-number
+            last-number
           ></b-pagination>
         </b-col>
       </b-row>
@@ -136,7 +161,7 @@ export default {
         this.pagination = response.pagination || {
           total: this.orders.length,
           per_page: 10,
-          current_page: 1,
+          current_page: page,
           last_page: 1
         };
         this.currentPage = page;
@@ -150,29 +175,17 @@ export default {
     onPageChange(page) {
       this.loadOrders(page);
     },
-    getStatusVariant(status) {
-      const statusMap = {
-        'pending': 'warning',
-        'paid': 'success',
-        'file_upload': 'info',
-        'processing': 'primary',
-        'ready': 'success',
-        'completed': 'success',
-        'cancelled': 'danger'
-      };
-      return statusMap[status] || 'secondary';
-    },
     formatStatus(status) {
-      const statusLabels = {
-        'pending': 'Pending Payment',
-        'paid': 'Payment Received',
-        'file_upload': 'Awaiting Files',
-        'processing': 'In Production',
-        'ready': 'Ready for Pickup',
-        'completed': 'Completed',
-        'cancelled': 'Cancelled'
+      const labels = {
+        pending: 'Pending Payment',
+        paid: 'Payment Received',
+        file_upload: 'Awaiting Files',
+        processing: 'In Production',
+        ready: 'Ready for Pickup',
+        completed: 'Completed',
+        cancelled: 'Cancelled'
       };
-      return statusLabels[status] || status;
+      return labels[status] || status || '—';
     },
     formatDate(dateString) {
       if (!dateString) return 'N/A';
@@ -199,11 +212,102 @@ export default {
 </script>
 
 <style scoped>
-.order-list-item {
-  transition: background-color 0.2s ease;
+:root { --soft: #f8fafc; }
+
+.muted { color: #64748b; }
+.text-primary-600 { color: #0ea5e9; }
+
+.soft-card {
+  border-radius: .9rem;
+  box-shadow: 0 10px 24px rgba(2,132,199,.06) !important;
 }
-.order-list-item:hover {
-  background-color: #f8f9fa;
-  text-decoration: none;
+
+/* Desktop table-like header */
+.order-header {
+  display: grid;
+  grid-template-columns: 240px 180px 220px 1fr 20px;
+  gap: 12px;
+  padding: .6rem 1rem;
+  border-bottom: 1px solid #eaeef4;
+  color: #475569;
+  font-weight: 700;
+  font-size: .9rem;
+}
+
+/* List container */
+.order-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Row */
+.order-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 240px 180px 220px 1fr 20px; /* match header */
+  gap: 12px;
+  align-items: center;
+  padding: .85rem 1rem;
+  border-bottom: 1px solid #eef2f7;
+  background: #fff;
+  text-decoration: none !important;
+  transition: background-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.order-row:hover {
+  background: #fbfdff;
+  box-shadow: 0 6px 20px rgba(2,132,199,.06);
+  transform: translateY(-1px);
+}
+
+/* Desktop cells */
+.order-no { font-weight: 800; color: #0f172a; }
+.date { color: #64748b; }
+.total { font-weight: 800; color: #0ea5e9; }
+.chev { font-size: 1.1rem; }
+
+/* Status chip */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: .2rem .55rem;
+  border-radius: 999px;
+  font-size: .78rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.status-pending    { background: #fff7ed; color: #b45309; border-color: #fde68a; }
+.status-paid       { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.status-file_upload{ background: #ecfeff; color: #0e7490; border-color: #a5f3fc; }
+.status-processing { background: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
+.status-ready      { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.status-completed  { background: #f0fdf4; color: #065f46; border-color: #bbf7d0; }
+.status-cancelled  { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+.status-other      { background: #f1f5f9; color: #334155; border-color: #e2e8f0; }
+
+/* Mobile card */
+.mobile-card {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: .35rem;
+  width: 100%;
+}
+.mobile-card .top {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.mobile-card .mid {
+  display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+}
+
+/* Responsive: switch to card layout for < md */
+@media (max-width: 767.98px) {
+  .order-header { display: none; }
+  .order-row {
+    grid-template-columns: 1fr;
+    padding: .85rem .9rem;
+    border: 1px solid #eef2f7;
+    border-radius: .9rem;
+    margin-bottom: .6rem;
+  }
 }
 </style>
