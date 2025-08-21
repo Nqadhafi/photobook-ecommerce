@@ -66,7 +66,7 @@
       <div class="container-fluid d-flex align-items-center justify-content-between px-2 px-lg-3 topbar-inner">
         <!-- Brand -->
         <b-navbar-brand :to="{ name: 'Home' }" class="d-flex align-items-center z-2">
-          <img src="../../components/assets/white-logo.png" alt="Photobook Studio" height="36" />
+          <img src="../../components/assets/white-logo.png" alt="Shabat Printing Photobook" height="36" />
         </b-navbar-brand>
 
         <!-- Search (desktop) -->
