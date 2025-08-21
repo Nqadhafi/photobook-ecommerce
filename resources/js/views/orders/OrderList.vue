@@ -12,8 +12,8 @@
       <!-- Title -->
       <b-row>
         <b-col cols="12">
-          <h2 class="mb-3">My Orders</h2>
-          <p class="muted mb-4">Track your orders and continue where you left off.</p>
+          <h2 class="mb-3">Pesanan saya</h2>
+          <p class="muted mb-4">Lihat dan lacak pesanan anda.</p>
         </b-col>
       </b-row>
 
@@ -43,10 +43,10 @@
         <b-col cols="12">
           <b-card class="text-center py-5 border-0 shadow-sm soft-card">
             <b-icon icon="inbox" font-scale="2" class="text-primary-600"></b-icon>
-            <h4 class="mt-3 mb-2">No Orders Found</h4>
-            <p class="muted mb-4">You haven't placed any orders yet.</p>
+            <h4 class="mt-3 mb-2">Tidak ada pesanan</h4>
+            <p class="muted mb-4">Anda belum memesan apapun.</p>
             <b-button variant="primary" :to="{ name: 'Products' }">
-              <b-icon icon="cart-plus"></b-icon> Start Shopping
+              <b-icon icon="cart-plus"></b-icon> Mulai Belanja
             </b-button>
           </b-card>
         </b-col>

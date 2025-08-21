@@ -16,7 +16,7 @@
             <h4><b-icon icon="exclamation-triangle"></b-icon> Error</h4>
             <p>{{ error }}</p>
             <b-button variant="primary" :to="{ name: 'Products' }">
-              <b-icon icon="arrow-left"></b-icon> Back to Products
+              <b-icon icon="arrow-left"></b-icon> Kembali ke Daftar Produk
             </b-button>
           </b-alert>
         </b-col>
@@ -90,8 +90,8 @@
             <div class="d-flex align-items-center justify-content-between my-3">
               <div class="h3 text-primary mb-0">Rp {{ formatCurrency(product.price) }}</div>
               <div class="text-right">
-                <b-badge v-if="product.is_active" variant="success">In Stock</b-badge>
-                <b-badge v-else variant="danger">Out of Stock</b-badge>
+                <b-badge v-if="product.is_active" variant="success">Tersedia</b-badge>
+                <b-badge v-else variant="danger">Stok Habis</b-badge>
                 <b-badge v-if="(product.total_sold || 0) > 0" variant="info" class="ml-1">
                   Terjual {{ formatCurrency(product.total_sold) }}
                 </b-badge>
@@ -137,7 +137,7 @@
                 <b-col md="6">
                   <b-form-group label="Design Options">
                     <b-form-checkbox v-model="cartForm.design_same" switch>
-                      Same design for all copies
+                      Desain sama untuk semua produk
                     </b-form-checkbox>
                   </b-form-group>
                 </b-col>
@@ -163,21 +163,21 @@
                 @dismissed="showSuccessMessage = false"
               >
                 <b-icon icon="check-circle"></b-icon>
-                Product added to cart successfully!
-                <b-link :to="{ name: 'Cart' }" class="alert-link ml-2">View Cart</b-link>
+               Sukses menambahkan produk ke keranjang!
+                <b-link :to="{ name: 'Cart' }" class="alert-link ml-2">Lihat Keranjang</b-link>
               </b-alert>
             </b-form>
 
             <div class="mt-3 d-flex flex-wrap gap-2">
               <b-button variant="outline-secondary" :to="{ name: 'Products' }" class="mr-2">
-                <b-icon icon="arrow-left"></b-icon> Back to Products
+                <b-icon icon="arrow-left"></b-icon> Kembali ke Daftar Produk
               </b-button>
               <b-button
                 v-if="!$store.getters['auth/isAuthenticated']"
                 variant="warning"
                 :to="{ name: 'Login' }"
               >
-                <b-icon icon="box-arrow-in-right"></b-icon> Login to Order
+                <b-icon icon="box-arrow-in-right"></b-icon> Masuk untuk Melanjutkan
               </b-button>
             </div>
           </b-card>

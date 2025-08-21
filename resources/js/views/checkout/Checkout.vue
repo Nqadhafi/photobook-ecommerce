@@ -303,8 +303,8 @@
               </b-list-group-item>
 
               <b-list-group-item class="d-flex justify-content-between align-items-center">
-                <span>Shipping</span>
-                <strong class="text-success">FREE</strong>
+                <span>Pengiriman</span>
+                <strong class="text-success">Ambil Ditempat</strong>
               </b-list-group-item>
 
               <b-list-group-item class="d-flex justify-content-between align-items-center">
@@ -342,7 +342,7 @@
         <div class="left">
           <div class="label">Total</div>
           <div class="value">Rp {{ formatCurrency(cartTotal) }}</div>
-          <div class="hint">Free shipping • Tax included</div>
+          <div class="hint">Ambil Di Tempat • Tax included</div>
         </div>
         <b-button
           variant="success"

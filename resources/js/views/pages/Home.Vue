@@ -1,13 +1,10 @@
 <template>
   <div class="home-page">
-    <!-- Navbar -->
     <Navbar />
 
-    <!-- ===== HERO ===== -->
     <section class="hero-section d-flex align-items-center">
       <b-container>
         <b-row class="align-items-center">
-          <!-- Gambar HERO (mobile di atas, desktop di kanan) -->
           <b-col md="6" class="text-center order-1 order-md-2 mb-4 mb-md-0">
             <div class="hero-image-wrap mx-auto">
               <b-img
@@ -19,7 +16,6 @@
             </div>
           </b-col>
 
-          <!-- Teks HERO -->
           <b-col md="6" class="order-2 order-md-1">
             <div class="hero-kicker mb-2">Shabat Printing Photobook</div>
             <h1 class="hero-title mb-3">Abadikan Momen Berharga Dengan Keluarga</h1>

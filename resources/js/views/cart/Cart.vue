@@ -5,9 +5,9 @@
       <b-row class="mb-3">
         <b-col>
           <h1 class="page-title">
-            <b-icon icon="cart"></b-icon> Shopping Cart
+            <b-icon icon="cart"></b-icon> Keranjang Belanja
           </h1>
-          <p class="text-muted mb-0">Review your items before checkout</p>
+          <p class="text-muted mb-0">Rewiew keranjang anda.</p>
         </b-col>
       </b-row>
 
@@ -24,7 +24,7 @@
         <b-col cols="12">
           <b-card class="text-center py-5 soft-card border-0">
             <b-icon icon="cart-x" font-scale="3" variant="secondary"></b-icon>
-            <h3 class="mt-3 mb-1">Your cart is empty</h3>
+            <h3 class="mt-3 mb-1">Keranjang anda kosong</h3>
             <p class="text-muted">Add some amazing photobooks to get started!</p>
             <b-button variant="primary" :to="{ name: 'Products' }" size="lg">
               <b-icon icon="images"></b-icon> Browse Products
@@ -102,7 +102,7 @@
                         <b-spinner small></b-spinner>
                       </template>
                       <template v-else>
-                        <b-icon icon="trash"></b-icon> Remove
+                        <b-icon icon="trash"></b-icon> Hapus
                       </template>
                     </b-button>
                   </div>
@@ -114,7 +114,7 @@
           <!-- Continue Shopping -->
           <div class="mt-3">
             <b-button variant="outline-primary" :to="{ name: 'Products' }">
-              <b-icon icon="arrow-left"></b-icon> Continue Shopping
+              <b-icon icon="arrow-left"></b-icon> Lanjutkan Belanja
             </b-button>
           </div>
         </b-col>
@@ -123,7 +123,7 @@
         <b-col lg="4" class="d-none d-lg-block">
           <b-card class="border-0 shadow-sm sticky-top" style="top: 20px;">
             <b-card-title class="mb-3">
-              <b-icon icon="receipt"></b-icon> Order Summary
+              <b-icon icon="receipt"></b-icon> Ringkasan Pesanan
             </b-card-title>
 
             <b-list-group flush class="summary-list">
@@ -132,8 +132,8 @@
                 <strong>Rp {{ formatCurrency(cartTotal) }}</strong>
               </b-list-group-item>
               <b-list-group-item class="d-flex justify-content-between align-items-center">
-                <span>Shipping</span>
-                <strong class="text-success">FREE</strong>
+                <span>Pengiriman</span>
+                <strong class="text-success">Ambil Di Tempat</strong>
               </b-list-group-item>
               <b-list-group-item class="d-flex justify-content-between align-items-center">
                 <span>Tax</span>
@@ -153,7 +153,7 @@
               :to="{ name: 'Checkout' }"
               :disabled="isEmpty"
             >
-              <b-icon icon="credit-card"></b-icon> Proceed to Checkout
+              <b-icon icon="credit-card"></b-icon> Lanjutkan ke Pembayaran
             </b-button>
 
             <b-button
@@ -162,7 +162,7 @@
               class="mt-2"
               :to="{ name: 'Products' }"
             >
-              <b-icon icon="images"></b-icon> Add More Items
+              <b-icon icon="images"></b-icon> Tambah Produk Lain
             </b-button>
           </b-card>
         </b-col>
@@ -175,7 +175,7 @@
         <div class="left">
           <div class="label">Total</div>
           <div class="value">Rp {{ formatCurrency(cartTotal) }}</div>
-          <div class="hint">Free shipping • Tax included</div>
+          <div class="hint">Tax included</div>
         </div>
         <b-button
           variant="success"

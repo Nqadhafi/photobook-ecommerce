@@ -119,8 +119,8 @@
       <b-row v-else>
         <b-col v-if="products.length === 0" cols="12" class="text-center py-5">
           <b-icon icon="images" font-scale="3" variant="secondary"></b-icon>
-          <h4 class="mt-3">No products found</h4>
-          <p>Try adjusting your search or filter criteria</p>
+          <h4 class="mt-3">Tidak ada produk ditemukan</h4>
+          <p>Coba cari kata kunci lain</p>
         </b-col>
 
         <!-- Card ala Shopee: 2 kolom mobile, 3 md, 4 lg -->

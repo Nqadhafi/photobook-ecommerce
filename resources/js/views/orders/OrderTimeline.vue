@@ -1,93 +1,115 @@
+<!-- resources/js/views/orders/OrderTimeline.vue -->
 <template>
-    <b-container>
-      <b-row v-if="loading">
-        <b-col cols="12" class="text-center py-5">
-          <b-spinner variant="primary" style="width: 3rem; height: 3rem;"></b-spinner>
-          <p class="mt-3">Loading order progress...</p>
-        </b-col>
-      </b-row>
+  <b-container>
+    <!-- Loading -->
+    <b-row v-if="loading">
+      <b-col cols="12" class="text-center py-5">
+        <b-spinner variant="primary" style="width:3rem;height:3rem;"></b-spinner>
+        <p class="mt-3">Loading order progress...</p>
+      </b-col>
+    </b-row>
 
-      <b-row v-else-if="error">
-        <b-col cols="12">
-          <b-alert variant="danger" show>
-            <h4><b-icon icon="exclamation-triangle"></b-icon> Error</h4>
-            <p>{{ error }}</p>
+    <!-- Error -->
+    <b-row v-else-if="error">
+      <b-col cols="12">
+        <b-alert variant="danger" show>
+          <h4><b-icon icon="exclamation-triangle"></b-icon> Error</h4>
+          <p class="mb-3">{{ error }}</p>
+          <div class="d-flex flex-wrap gap-2">
             <b-button v-if="order" :to="{ name: 'OrderDetail', params: { id: $route.params.id } }" variant="primary" size="sm" class="mr-2">
-              <b-icon icon="arrow-left"></b-icon> Back to Order
+              <b-icon icon="arrow-left"></b-icon> Kembali ke Pesanan
             </b-button>
             <b-button :to="{ name: 'Orders' }" variant="outline-primary" size="sm">
-              <b-icon icon="list"></b-icon> View All Orders
+              <b-icon icon="list"></b-icon> Lihat Semua Pesanan
             </b-button>
-          </b-alert>
-        </b-col>
-      </b-row>
+          </div>
+        </b-alert>
+      </b-col>
+    </b-row>
 
-      <!-- Wizard Timeline -->
-      <b-row v-else-if="timeline.length > 0">
-        <b-col cols="12">
-          <b-card>
-            <div class="wizard-container">
-              <div
-                v-for="(event, index) in timeline"
-                :key="index"
-                :class="[
-                  'wizard-step',
-                  { 'active': index === currentStepIndex },
-                  { 'completed': index < currentStepIndex },
-                  { 'future': index > currentStepIndex },
-                  { 'no-timestamp': !event.timestamp } // Tambahkan kelas jika tidak ada timestamp
-                ]"
-              >
-                <div class="step-line"></div>
-                <div class="step-icon-wrapper">
-                  <div class="step-icon">
-                    <b-icon :icon="getTimelineIcon(event.status)" :variant="getTimelineIconVariant(event.status)"></b-icon>
-                  </div>
+    <!-- Timeline -->
+    <b-row v-else-if="timeline.length">
+      <b-col cols="12">
+        <b-card class="border-0 shadow-sm">
+          <!-- Wizard -->
+          <div class="wizard-container">
+            <div
+              v-for="(step, idx) in timeline"
+              :key="step.status"
+              :class="[
+                'wizard-step',
+                { completed: idx < currentStepIndex },
+                { active: idx === currentStepIndex },
+                { future: idx > currentStepIndex },
+                { cancelled: isCancelled && idx !== cancelIndex }
+              ]"
+            >
+              <!-- connector line segment -->
+              <div class="step-line"></div>
+
+              <!-- icon -->
+              <div class="step-icon-wrapper">
+                <div class="step-icon" :class="'ico-' + step.status">
+                  <b-icon :icon="getIcon(step.status)"></b-icon>
                 </div>
-                <div class="step-label">{{ event.label }}</div>
-                <!-- --- Tambahkan Tanggal --- -->
-                <div v-if="event.timestamp" class="step-date text-muted small">
-                  {{ formatDate(event.timestamp) }}
-                </div>
-                <div v-else class="step-date text-muted small">
-                  Pending
-                </div>
-                 <!-- ---------------------- -->
               </div>
+
+              <!-- label -->
+              <div class="step-label">{{ getLabel(step.status) }}</div>
+
+              <!-- timestamp / pending -->
+              <div class="step-date text-muted small" v-if="step.timestamp">
+                {{ formatDate(step.timestamp) }}
+              </div>
+              <div class="step-date text-muted small" v-else>Pending</div>
+            </div>
+          </div>
+
+          <!-- Current step detail -->
+          <div v-if="currentStep" class="current-step-detail mt-4 p-3 bg-light rounded">
+            <h5 class="mb-2 d-flex align-items-center">
+              <b-icon :icon="getIcon(currentStep.status)" :class="'mr-2 text-' + getVariant(currentStep.status)"></b-icon>
+              {{ getLabel(currentStep.status) }}
+            </h5>
+            <p class="mb-1">{{ getDescription(currentStep.status) }}</p>
+            <small class="text-muted d-block mb-2">
+              <b-icon icon="clock"></b-icon>
+              {{ currentStep.timestamp ? formatDate(currentStep.timestamp) : 'Waiting to be updated' }}
+            </small>
+
+            <!-- pickup code (show when ready/completed and code exists) -->
+            <div v-if="pickupCode && (currentStep.status === 'ready' || currentStep.status === 'completed')" class="mt-2">
+              <strong>Pickup Code:</strong>
+              <code class="bg-white px-2 py-1 rounded">{{ pickupCode }}</code>
             </div>
 
-            <!-- Detail Langkah Saat Ini -->
-            <div v-if="currentStep" class="current-step-detail mt-4 p-3 bg-light rounded">
-              <h4 class="mb-2">
-                <b-icon :icon="getTimelineIcon(currentStep.status)" :variant="getTimelineIconVariant(currentStep.status)" class="mr-2"></b-icon>
-                {{ currentStep.label }}
-              </h4>
-              <p class="mb-1">{{ currentStep.description }}</p>
-              <small class="text-muted">
-                <b-icon icon="clock"></b-icon> {{ formatDate(currentStep.timestamp) }}
-              </small>
-              <div v-if="currentStep.pickup_code" class="mt-2">
-                <strong>Pickup Code:</strong> <code class="bg-white px-2 py-1 rounded">{{ currentStep.pickup_code }}</code>
-              </div>
-            </div>
-          </b-card>
-        </b-col>
-      </b-row>
-      <!-- No Timeline Data -->
-      <b-row v-else>
-        <b-col cols="12" class="text-center py-5">
-          <b-icon icon="hourglass-split" font-scale="3" variant="secondary"></b-icon>
-          <h4 class="mt-3">No timeline data available.</h4>
-          <p class="text-muted">The progress for this order will be updated as it advances.</p>
-           <b-button v-if="order" :to="{ name: 'OrderDetail', params: { id: $route.params.id } }" variant="primary" class="mr-2">
-            <b-icon icon="arrow-left"></b-icon> Back to Order
+            <!-- If cancelled -->
+            <b-alert v-if="isCancelled" show variant="danger" class="mt-3 mb-0">
+              <b-icon icon="x-circle"></b-icon>
+              Order telah <strong>dibatalkan</strong>.
+            </b-alert>
+          </div>
+        </b-card>
+      </b-col>
+    </b-row>
+
+    <!-- Empty -->
+    <b-row v-else>
+      <b-col cols="12" class="text-center py-5">
+        <b-icon icon="hourglass-split" font-scale="3" variant="secondary"></b-icon>
+        <h4 class="mt-3">No timeline available.</h4>
+        <p class="text-muted">Progress pesanan akan segera ditampilkan.</p>
+        <div class="d-flex justify-content-center gap-2">
+          <b-button v-if="order" :to="{ name: 'OrderDetail', params: { id: $route.params.id } }" variant="primary" class="mr-2">
+            <b-icon icon="arrow-left"></b-icon> Kembali ke Pesanan
           </b-button>
           <b-button :to="{ name: 'Orders' }" variant="outline-primary">
-            <b-icon icon="list"></b-icon> View All Orders
+            <b-icon icon="list"></b-icon> Lihat Semua Pesanan
           </b-button>
-        </b-col>
-      </b-row>
-    </b-container>
+        </div>
+      </b-col>
+    </b-row>
+  </b-container>
 </template>
 
 <script>
@@ -98,45 +120,40 @@ export default {
   data() {
     return {
       order: null,
+      rawTimeline: [],
       timeline: [],
       loading: false,
       error: null,
-      currentStepIndex: -1 // Inisialisasi dengan -1
+      currentStepIndex: -1,
+      cancelIndex: -1,
+      pickupCode: null
     };
-  },
-  computed: {
-    breadcrumbItems() {
-      const items = [
-        { text: 'Dashboard', to: { name: 'Dashboard' } },
-        { text: 'Orders', to: { name: 'Orders' } }
-      ];
-      if (this.order) {
-        items.push({ text: `Order #${this.order.order_number}`, to: { name: 'OrderDetail', params: { id: this.$route.params.id } } });
-      }
-      items.push({ text: 'Progress', active: true });
-      return items;
-    },
-    currentStep() {
-      // Pastikan currentStepIndex valid
-      if (this.currentStepIndex >= 0 && this.currentStepIndex < this.timeline.length) {
-        return this.timeline[this.currentStepIndex];
-      }
-      return null; // Atau objek kosong {}
-    }
   },
   async created() {
     await this.loadOrder();
     await this.loadTimeline();
   },
+  computed: {
+    isCancelled() {
+      return this.timeline.some(s => s.status === 'cancelled' && s.timestamp);
+    },
+    currentStep() {
+      if (this.currentStepIndex >= 0 && this.currentStepIndex < this.timeline.length) {
+        return this.timeline[this.currentStepIndex];
+      }
+      return null;
+    }
+  },
   methods: {
     async loadOrder() {
       try {
         const orderId = this.$route.params.id;
-        const response = await orderService.getOrder(orderId);
-        this.order = response.data;
-      } catch (error) {
-        console.warn('Failed to load order for breadcrumb:', error);
-        // Tidak perlu set error utama di sini
+        const res = await orderService.getOrder(orderId);
+        this.order = res.data;
+        this.pickupCode = this.order && this.order.pickup_code ? this.order.pickup_code : null;
+      } catch (e) {
+        // breadcrumb/order optional; jangan ganggu flow
+        console.warn('loadOrder (optional) failed:', e);
       }
     },
     async loadTimeline() {
@@ -144,266 +161,297 @@ export default {
       this.error = null;
       try {
         const orderId = this.$route.params.id;
-        const response = await orderService.getOrderTimeline(orderId);
-        this.timeline = response.data || [];
-        this.determineCurrentStep();
-      } catch (error) {
-        console.error('Failed to load timeline:', error);
-        this.error = error.message || 'Failed to load order progress.';
+        const res = await orderService.getOrderTimeline(orderId);
+        this.rawTimeline = Array.isArray(res.data) ? res.data : [];
+
+        // Normalisasi dan urutkan sesuai step baku app
+        this.timeline = this.normalizeTimeline(this.rawTimeline, this.order);
+        this.computeCurrentIndex();
+      } catch (e) {
+        console.error('Failed to load timeline:', e);
+        this.error = e?.message || 'Failed to load order progress.';
       } finally {
         this.loading = false;
       }
     },
-    determineCurrentStep() {
-      // Cari indeks langkah terakhir yang memiliki timestamp (artinya sudah terjadi)
-      // Ini akan menjadi langkah "aktif" yang ditampilkan
-      let lastCompletedIndex = -1;
-      for (let i = this.timeline.length - 1; i >= 0; i--) {
-        if (this.timeline[i].timestamp) {
-          lastCompletedIndex = i;
-          break;
+
+    // --- Normalization ---
+    normalizeTimeline(raw, order) {
+      // Peta alias -> status baku
+      const aliasMap = {
+        created: 'pending',
+        pending: 'pending',
+        paid: 'paid',
+        file_uploaded: 'file_upload',
+        file_upload: 'file_upload',
+        processing: 'processing',
+        ready: 'ready',
+        completed: 'completed',
+        cancelled: 'cancelled'
+      };
+
+      // status baku & urutan
+      const canonicalOrder = ['pending', 'paid', 'file_upload', 'processing', 'ready', 'completed'];
+
+      // Build map dari raw
+      const stampByStatus = {};
+      raw.forEach(ev => {
+        const key = aliasMap[(ev.status || '').toLowerCase()] || 'pending';
+        // ambil timestamp terbaru jika duplikat
+        const ts = ev.timestamp || ev.updated_at || ev.created_at || null;
+        if (!stampByStatus[key] || (ts && new Date(ts) > new Date(stampByStatus[key]))) {
+          stampByStatus[key] = ts;
+        }
+      });
+
+      // Inject dari order (fallback) kalau backend timeline kosong/minim
+      if (order) {
+        if (order.created_at && !stampByStatus.pending) stampByStatus.pending = order.created_at;
+        if (order.paid_at && !stampByStatus.paid) stampByStatus.paid = order.paid_at;
+        if ((order.status === 'file_upload' || order.file_upload_at) && !stampByStatus.file_upload) {
+          stampByStatus.file_upload = order.file_upload_at || order.updated_at || null;
+        }
+        if ((order.status === 'processing' || order.processing_at) && !stampByStatus.processing) {
+          stampByStatus.processing = order.processing_at || order.updated_at || null;
+        }
+        if ((order.status === 'ready' || order.ready_at) && !stampByStatus.ready) {
+          stampByStatus.ready = order.ready_at || order.updated_at || null;
+        }
+        if ((order.status === 'completed' || order.completed_at) && !stampByStatus.completed) {
+          stampByStatus.completed = order.completed_at || order.updated_at || null;
         }
       }
-      this.currentStepIndex = lastCompletedIndex;
+
+      // Kalau cancelled, tambahkan node cancelled di akhir
+      let cancelledTs = null;
+      const rawCancelled = raw.find(e => aliasMap[(e.status || '').toLowerCase()] === 'cancelled');
+      if (rawCancelled) {
+        cancelledTs = rawCancelled.timestamp || rawCancelled.updated_at || rawCancelled.created_at || null;
+      } else if (order && order.status === 'cancelled') {
+        cancelledTs = order.cancelled_at || order.updated_at || null;
+      }
+
+      // Compose list final (baku)
+      const finalList = canonicalOrder.map(s => ({
+        status: s,
+        timestamp: stampByStatus[s] || null
+      }));
+
+      if (cancelledTs) {
+        finalList.push({ status: 'cancelled', timestamp: cancelledTs });
+      }
+
+      return finalList;
     },
-    getTimelineIcon(status) {
-      const iconMap = {
-        'created': 'cart-plus',
-        'paid': 'cash-coin',
-        'file_uploaded': 'cloud-upload',
-        'processing': 'gear',
-        'ready': 'box-seam',
-        'completed': 'check-circle',
-        'cancelled': 'x-circle'
+
+    computeCurrentIndex() {
+      // Jika cancelled, current = index cancelled
+      const cancelIdx = this.timeline.findIndex(s => s.status === 'cancelled' && s.timestamp);
+      if (cancelIdx !== -1) {
+        this.currentStepIndex = cancelIdx;
+        this.cancelIndex = cancelIdx;
+        return;
+      }
+
+      // Ambil langkah terakhir yang sudah punya timestamp
+      let lastIdx = -1;
+      for (let i = 0; i < this.timeline.length; i++) {
+        if (this.timeline[i].timestamp) lastIdx = i;
+      }
+      this.currentStepIndex = lastIdx;
+    },
+
+    // --- Labels, descriptions, icons, variants ---
+    getLabel(status) {
+      const labels = {
+        pending: 'Menunggu Pembayaran',
+        paid: 'Pembayaran Diterima',
+        file_upload: 'Upload File Anda',
+        processing: 'Sedang Diproduksi',
+        ready: 'Siap Diambil',
+        completed: 'Selesai',
+        cancelled: 'Dibatalkan'
       };
-      return iconMap[status] || 'question-circle';
+      return labels[status] || status;
     },
-    getTimelineIconVariant(status) {
-      const variantMap = {
-        'created': 'secondary',
-        'paid': 'success',
-        'file_uploaded': 'info',
-        'processing': 'primary',
-        'ready': 'warning',
-        'completed': 'success',
-        'cancelled': 'danger'
+    getDescription(status) {
+      const desc = {
+        pending: 'Pesanan berhasil dibuat, menunggu pembayaran.',
+        paid: 'Pembayaran diterima. Sedang menyiapkan folder upload.',
+        file_upload: 'Link Google Drive Siap, Silahkan Upload File Anda.',
+        processing: 'Pesanan sedang diproduksi.',
+        ready: 'Pesanan siap diambil..',
+        completed: 'Pesanan telah selesai. Terima kasih!',
+        cancelled: 'Pesanan dibatalkan.'
       };
-      return variantMap[status] || 'secondary';
+      return desc[status] || '';
     },
-    formatDate(dateString) {
-      if (!dateString) return 'N/A';
-      const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-      return new Date(dateString).toLocaleDateString('id-ID', options);
+    getIcon(status) {
+      const icons = {
+        pending: 'cart-plus',
+        paid: 'cash-coin',
+        file_upload: 'cloud-upload',
+        processing: 'gear',
+        ready: 'box-seam',
+        completed: 'check-circle',
+        cancelled: 'x-circle'
+      };
+      return icons[status] || 'question-circle';
+    },
+    getVariant(status) {
+      const variants = {
+        pending: 'warning',
+        paid: 'info',
+        file_upload: 'primary',
+        processing: 'primary',
+        ready: 'warning',
+        completed: 'success',
+        cancelled: 'danger'
+      };
+      return variants[status] || 'secondary';
+    },
+
+    // --- Utils ---
+    formatDate(d) {
+      if (!d) return 'N/A';
+      try {
+        const opt = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+        return new Date(d).toLocaleDateString('id-ID', opt);
+      } catch {
+        return 'N/A';
+      }
     }
   }
 };
 </script>
 
 <style scoped>
-/* --- Wizard Styles --- */
+/* Container line across steps */
 .wizard-container {
+  position: relative;
   display: flex;
   justify-content: space-between;
-  position: relative;
-  margin: 2rem 0;
+  gap: 8px;
+  padding: 10px 0 6px;
+  margin: .5rem 0 1rem;
 }
-
-/* Garis horizontal penghubung */
 .wizard-container::before {
   content: '';
   position: absolute;
-  top: 20px; /* Sesuaikan dengan tinggi ikon */
-  left: 0;
-  right: 0;
+  top: 28px; /* center line to icons */
+  left: 0; right: 0;
   height: 2px;
-  background-color: #ced4da; /* Warna default garis */
+  background: #e5e7eb;
   z-index: 1;
 }
 
+/* Step */
 .wizard-step {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1;
   position: relative;
-  z-index: 2; /* Di atas garis */
-  padding: 0 10px; /* Tambahkan padding untuk jarak antar langkah */
+  z-index: 2;
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
 }
 
-/* Garis kecil antar ikon */
+/* Segment connector between steps */
 .step-line {
   position: absolute;
-  top: 20px; /* Sesuaikan dengan tinggi ikon */
-  left: 0;
-  right: 0;
+  top: 28px;
+  left: 0; right: 0;
   height: 2px;
-  background-color: #ced4da; /* Warna default */
-  transition: background-color 0.3s ease;
+  background: #e5e7eb;
+  transition: background-color .25s ease;
 }
-/* Sembunyikan garis untuk langkah pertama */
-.wizard-step:first-child .step-line {
-  left: 50%;
-}
-/* Sembunyikan garis untuk langkah terakhir */
-.wizard-step:last-child .step-line {
-  right: 50%;
-}
+/* First & last halves */
+.wizard-step:first-child .step-line { left: 50%; }
+.wizard-step:last-child .step-line { right: 50%; }
 
-.step-icon-wrapper {
-  position: relative;
-  margin-bottom: 0.5rem;
-}
-
+/* Icon bubble */
 .step-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background-color: #e9ecef; /* Default background */
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  border: 2px solid #e2e8f0;
+  color: #64748b;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #ced4da; /* Default border */
-  color: #6c757d; /* Default icon color */
-  transition: all 0.3s ease;
-  font-size: 1.2rem;
+  transition: all .2s ease;
 }
-
 .step-label {
-  font-size: 0.85rem;
-  text-align: center;
-  color: #6c757d; /* Default label color */
-  transition: color 0.3s ease;
-  font-weight: 500;
-  max-width: 100px; /* Batasi lebar label */
-  word-break: break-word; /* Pecah kata jika terlalu panjang */
-  margin-bottom: 0.25rem; /* Jarak antara label dan tanggal */
+  margin-top: .5rem;
+  font-size: .85rem;
+  color: #6b7280;
+  font-weight: 600;
 }
-
-/* --- Tanggal Langkah --- */
 .step-date {
-  font-size: 0.7rem; /* Ukuran font lebih kecil */
-  text-align: center;
-  color: #6c757d; /* Warna teks abu-abu */
-  max-width: 100px; /* Batasi lebar agar sesuai dengan label */
-  word-break: break-word;
-}
-/* --------------------- */
-
-/* Status: Future (Belum terjadi) */
-.wizard-step.future .step-icon {
-  background-color: #f8f9fa;
-  border-color: #ced4da;
-  color: #6c757d;
-}
-.wizard-step.future .step-label,
-.wizard-step.future .step-date {
-  color: #6c757d;
-}
-.wizard-step.future .step-line {
-   background-color: #ced4da;
+  font-size: .72rem;
+  color: #94a3b8;
 }
 
-/* Status: Completed (Sudah terjadi) */
+/* Completed */
 .wizard-step.completed .step-icon {
-  background-color: #28a745; /* Success color */
-  border-color: #28a745;
-  color: white;
+  background: #10b981;
+  border-color: #10b981;
+  color: #fff;
 }
-.wizard-step.completed .step-label {
-  color: #28a745;
-  font-weight: bold;
-}
+.wizard-step.completed .step-label,
 .wizard-step.completed .step-date {
-  color: #28a745; /* Tanggal juga ikut berubah warna */
+  color: #10b981;
 }
 .wizard-step.completed .step-line {
-   background-color: #28a745; /* Success color */
+  background: #10b981;
 }
 
-/* Status: Active (Langkah saat ini) */
+/* Active */
 .wizard-step.active .step-icon {
-  background-color: #007bff; /* Primary color */
-  border-color: #007bff;
-  color: white;
-  transform: scale(1.1); /* Sedikit memperbesar ikon aktif */
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* Tambahkan bayangan untuk efek */
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+  transform: scale(1.08);
+  box-shadow: 0 4px 10px rgba(59,130,246,.25);
 }
-.wizard-step.active .step-label {
-  color: #007bff;
-  font-weight: bold;
-}
+.wizard-step.active .step-label,
 .wizard-step.active .step-date {
-  color: #007bff; /* Tanggal juga ikut berubah warna */
+  color: #3b82f6;
 }
 .wizard-step.active .step-line {
-   /* Garis menuju langkah aktif bisa berbeda warna */
-   /* background-color: #007bff; */
-   /* Atau gunakan warna completed jika lebih konsisten */
-   background-color: #28a745;
+  background: #10b981; /* completed up to active */
 }
 
-/* Status: No Timestamp (Pending) */
-.wizard-step.no-timestamp .step-date {
-  font-style: italic; /* Buat tanggal miring jika pending */
+/* Cancelled (dim others when cancelled) */
+.wizard-step.cancelled .step-icon,
+.wizard-step.cancelled .step-label,
+.wizard-step.cancelled .step-date {
+  opacity: .65;
 }
 
-/* Detail Langkah Saat Ini */
-.current-step-detail h4 {
-  margin-top: 0;
-}
-.current-step-detail code {
-  font-size: 1rem;
+/* Current step detail */
+.current-step-detail {
+  border: 1px solid #e5e7eb;
 }
 
-/* Responsif untuk layar kecil */
+/* Responsive: grid-like on small screens */
 @media (max-width: 767.98px) {
   .wizard-container {
     flex-wrap: wrap;
+    gap: 14px 10px;
   }
+  .wizard-container::before { display: none; }
   .wizard-step {
-    flex: 0 0 50%; /* 2 kolom di layar kecil */
-    margin-bottom: 2rem;
+    flex: 0 0 calc(50% - 5px);
+    align-items: center;
   }
-  .wizard-step:nth-child(odd) {
-    padding-right: 20px; /* Tambahkan padding kanan untuk kolom ganjil */
-  }
-  .wizard-step:nth-child(even) {
-    padding-left: 20px; /* Tambahkan padding kiri untuk kolom genap */
-  }
-  /* Sesuaikan garis horizontal untuk 2 kolom */
-  .wizard-container::before {
-    display: none; /* Sembunyikan garis horizontal utuh */
-  }
-  /* Tampilkan garis vertikal antar baris jika diperlukan */
-  /* ... (CSS tambahan untuk garis vertikal bisa ditambahkan di sini jika diinginkan) ... */
-
-  .step-label {
-    font-size: 0.75rem;
-    max-width: 80px;
-  }
-  .step-date {
-    font-size: 0.65rem; /* Ukuran font lebih kecil lagi di layar kecil */
-    max-width: 80px;
-  }
-  .step-icon {
-    width: 36px;
-    height: 36px;
-    font-size: 1rem;
-  }
+  .wizard-step .step-line { display: none; }
+  .step-icon { width: 40px; height: 40px; }
+  .step-label { font-size: .8rem; }
+  .step-date { font-size: .68rem; }
 }
-
-@media (max-width: 575.98px) {
-  .wizard-step {
-    flex: 0 0 100%; /* 1 kolom di layar sangat kecil */
-    padding: 0 10px !important; /* Reset padding */
-    margin-bottom: 1.5rem;
-  }
-  .step-label {
-    max-width: none; /* Hapus batas lebar */
-  }
-  .step-date {
-    max-width: none; /* Hapus batas lebar */
-  }
+@media (max-width: 420px) {
+  .wizard-step { flex: 0 0 100%; }
 }
-/* ---------------------------- */
 </style>
