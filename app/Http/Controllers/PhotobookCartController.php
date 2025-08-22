@@ -7,7 +7,6 @@ use App\Models\PhotobookCart;
 use App\Models\PhotobookProduct;
 use App\Models\PhotobookTemplate;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class PhotobookCartController extends Controller
@@ -64,23 +63,11 @@ class PhotobookCartController extends Controller
         $product = PhotobookProduct::find($validatedData['product_id']);
         $template = PhotobookTemplate::find($validatedData['template_id']);
 
-        Log::debug('Debug Cart Validation for User ID: ' . $request->user()->id, [
-    'request_product_id' => $validatedData['product_id'],
-    'db_product_id' => $product->id,
-    'product_is_active' => $product->is_active,
-    'request_template_id' => $validatedData['template_id'],
-    'db_template_id' => $template->id,
-    'template_product_id' => $template->product_id,
-    'template_is_active' => $template->is_active,
-    'final_product_check' => ($template->product_id === $product->id),
-    'final_active_check' => ($product->is_active && $template->is_active)
-]);
-
         if (!$product->is_active) {
             return response()->json(['error' => 'Product is not active'], 422);
         }
 
-        if (!$template->is_active || $template->product_id !== $product->id) {
+        if (!$template->is_active || $template->product_id != $product->id) {
              // Tambahkan validasi tambahan: template harus milik produk yang dipilih
             return response()->json(['error' => 'Invalid template for this product'], 422);
         }
