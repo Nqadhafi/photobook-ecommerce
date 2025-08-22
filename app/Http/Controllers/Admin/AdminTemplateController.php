@@ -63,6 +63,7 @@ class AdminTemplateController extends Controller
             'layout_data.dimensions' => 'required|string|max:50',
             'layout_data.layout_type' => 'required|string|max:100',
             'layout_data.photo_slots' => 'required|integer|min:0',
+            'is_active' => 'sometimes|boolean',
             
             // Tambahkan validasi untuk field lain dalam layout_data jika diperlukan
             // Tambahkan validasi untuk field lain jika ada
@@ -115,6 +116,7 @@ public function update(Request $request, PhotobookTemplate $template): JsonRespo
         'layout_data.dimensions' => 'sometimes|required|string|max:50',
         'layout_data.layout_type' => 'sometimes|required|string|max:100',
         'layout_data.photo_slots' => 'sometimes|required|integer|min:0',
+        'is_active' => 'sometimes|boolean',
     ]);
 
     try {
@@ -159,7 +161,7 @@ public function update(Request $request, PhotobookTemplate $template): JsonRespo
             // Misalnya, cek relasi dengan PhotobookOrderItem atau PhotobookProduct
             // Anda perlu menyesuaikan nama relasi berdasarkan model Anda.
             // Contoh jika ada relasi 'items' di model PhotobookTemplate:
-            $isInUse = $template->items()->exists();
+            $isInUse = $template->orderItems()->exists();
             if ($isInUse) {
                 return response()->json(['error' => 'Cannot delete template because it is associated with orders or products.'], 400);
             }
