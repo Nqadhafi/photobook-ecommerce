@@ -44,7 +44,7 @@ class OrderHistoryController extends Controller
     public function show(Request $request, PhotobookOrder $order): JsonResponse
     {
         // Authorization: Pastikan user memiliki order ini
-        if ($request->user()->id !== $order->user_id) {
+        if ($request->user()->id != $order->user_id) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -72,7 +72,7 @@ class OrderHistoryController extends Controller
     public function timeline(Request $request, PhotobookOrder $order): JsonResponse
     {
         // Authorization: Pastikan user memiliki order ini
-        if ($request->user()->id !== $order->user_id) {
+        if ($request->user()->id != $order->user_id) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
