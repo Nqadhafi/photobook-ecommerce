@@ -44,9 +44,6 @@
                 { cancelled: isCancelled && idx !== cancelIndex }
               ]"
             >
-              <!-- connector line segment -->
-              <div class="step-line"></div>
-
               <!-- icon -->
               <div class="step-icon-wrapper">
                 <div class="step-icon" :class="'ico-' + step.status">
